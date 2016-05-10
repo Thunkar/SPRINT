@@ -1,6 +1,10 @@
-#include<iostream>
+# include<iostream>
+# include "csv.h"
  
 int main(int argc, char *argv[]){
-   std::cout << "Hello World!" << std::endl;
-   return 0;
+  io::CSVReader<9> in("abalone.data");
+  std::string sex; double length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
+  while(in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings))	{
+  	std::cout << sex << std::endl;
+  }
 }
