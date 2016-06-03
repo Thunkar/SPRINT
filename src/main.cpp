@@ -1,27 +1,30 @@
 # include<iostream>
 # include "csv.h"
 
+using namespace std;
+using namespace io;
+
 const int size_y = 10;
 const int csv_width = 9; 
 const int size_x = 10;
 
 
-int divide(std::string **array, int start, int end, int column) {
+int divide(string **array, int start, int end, int column) {
     int left;
     int right;
     float pivot;
-    std::string *temp = new std::string[size_x];
+    string *temp = new string[size_x];
 
-    pivot = std::atof(array[start][column].c_str());
+    pivot = atof(array[start][column].c_str());
     left = start;
     right = end;
 
     while (left < right) {
-        while (std::atof(array[right][column].c_str()) > pivot) {
+        while (atof(array[right][column].c_str()) > pivot) {
             right--;
         }
 
-        while ((left < right) && (std::atof(array[left][column].c_str()) <= pivot)) {
+        while ((left < right) && (atof(array[left][column].c_str()) <= pivot)) {
             left++;
         }
 
@@ -39,7 +42,7 @@ int divide(std::string **array, int start, int end, int column) {
     return right;
 }
 
-void quicksort(std::string **array, int start, int end, int column)
+void quicksort(string **array, int start, int end, int column)
 {
     int pivot;
 
@@ -53,7 +56,7 @@ void quicksort(std::string **array, int start, int end, int column)
 }
 
 
-std::string SPRINT(std::string **dataSet, int row, int column) {
+string SPRINT(string **dataSet, int row, int column) {
     quicksort(dataSet, row, size_y - 1, column);
     for(int i = row; i < size_y; i++){
         std::cout << dataSet[i][1] << std::endl;
@@ -62,15 +65,15 @@ std::string SPRINT(std::string **dataSet, int row, int column) {
 
 int main(int argc, char *argv[]){
 
-    io::CSVReader<csv_width> in("abalone.data");
-    std::string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
+    CSVReader<csv_width> in("abalone.data");
+    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
 
-    std::string **dataSet = new std::string*[size_y];
+    string **dataSet = new string*[size_y];
 
     for(int i = 0; i < size_y; i++){
-        dataSet[i] = new std::string[size_x];
+        dataSet[i] = new string[size_x];
         in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
-        std::string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings, "-1"};
+        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings, "-1"};
         for(int j = 0; j < size_x; j++) {
            *&dataSet[i][j] = line[j];
         }
