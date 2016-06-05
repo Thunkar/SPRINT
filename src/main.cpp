@@ -77,20 +77,25 @@ double gini(string **data_set, int current_y_size, int split_row, int column) {
    double gini_yes, gini_no;
 
    for(int j = 0; j < n_classes; j++){
-        gini_yes += gini_matrix[0][j]/total_yes;
-        gini_no += gini_matrix[1][j]/total_no;
+        gini_yes += (gini_matrix[0][j]/total_yes)*(gini_matrix[0][j]/total_yes);
+        gini_no += (gini_matrix[1][j]/total_no)*(gini_matrix[1][j]/total_no);
    }
-   gini_yes = (1 - gini_yes)*(total_yes/(double)n_classes);
-   gini_no = (1 - gini_no)*(total_no/(double)n_classes);
+   gini_yes = (1 - gini_yes)*(total_yes/(double)current_y_size);
+   gini_no = (1 - gini_no)*(total_no/(double)current_y_size);
    
    return gini_yes + gini_no;
 
 }
 
 string SPRINT(string **data_set) {
+    quicksort(data_set, 0, size_y -1, 1);
     for(int i = 0; i < size_y; i++){
-        std::cout << data_set[i][0] << std::endl;
+        cout << data_set[i][0];
+        cout << " ";
+        cout << data_set[i][1] << endl;
     }
+    cout << "Gini 4: ";
+    cout << gini(data_set, size_y, 4, 1) << endl; 
 }
 
 int main(int argc, char *argv[]){
