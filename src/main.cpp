@@ -1,13 +1,16 @@
-# include<iostream>
+# include <iostream>
 # include "csv.h"
+# include "math.h"
+
 
 using namespace std;
 using namespace io;
 
-const int size_y = 10;
-const int csv_width = 9; 
-const int size_x = 10;
+const int size_y = 1000;
+const int size_x = 9;
 const int n_classes = 2;
+const int max_tree_depth = 5;
+const double gini_threshold = 0.1;
 
 int divide(string **array, int start, int end, int column) {
     int left;
@@ -55,7 +58,7 @@ void quicksort(string **array, int start, int end, int column)
     }
 }
 
-double gini(string **data_set, int current_y_size, int split_row, int column) {
+double gini(string **data_set, int size_y, int split_row, int column) {
     double **gini_matrix = new double*[2];
     for(int i = 0; i < 2; i++) {
         gini_matrix[i] = new double[n_classes];
@@ -66,7 +69,7 @@ double gini(string **data_set, int current_y_size, int split_row, int column) {
     double total_yes = 0;
     double total_no = 0;
 
-    for(int i = 0; i < current_y_size; i++) {
+    for(int i = 0; i < size_y; i++) {
         if(i <= split_row){
             gini_matrix[0][atoi(data_set[i][0].c_str())]++;
             total_yes++;
@@ -84,42 +87,73 @@ double gini(string **data_set, int current_y_size, int split_row, int column) {
         gini_yes += (gini_matrix[0][j]/total_yes)*(gini_matrix[0][j]/total_yes);
         gini_no += (gini_matrix[1][j]/total_no)*(gini_matrix[1][j]/total_no);
     }
-    gini_yes = (1 - gini_yes)*(total_yes/(double)current_y_size);
-    gini_no = (1 - gini_no)*(total_no/(double)current_y_size);
+    gini_yes = (1 - gini_yes)*(total_yes/(double)size_y);
+    gini_no = (1 - gini_no)*(total_no/(double)size_y);
 
+    if(total_no == 0) 
+        gini_no = 0;
+    if(total_yes == 0)
+        gini_yes = 0;
     return gini_yes + gini_no;
 
 }
 
-double* bestGiniSplit(string ** data_set, int current_y_size) {
-    double *best_split = new double[3];
-    best_split[2] = 1;
-
-    for(int j = 1; j < csv_width; j++) {
-        quicksort(data_set, 0, current_y_size - 1, j);
-        for(int i = 0; i < current_y_size; i++){
-            double current_gini = gini(data_set, current_y_size, i, j);
-            if(current_gini < best_split[2]){
-                double new_best_split[] = {i, j, current_gini};
-                best_split = new_best_split; 
+string* bestGiniSplit(string ** data_set, int size_y) {
+    double best_gini = 1;
+    int row_split, column;
+    string value;
+    for(int j = 1; j < size_x; j++) {
+        quicksort(data_set, 0, size_y - 1, j);
+        for(int i = 0; i < size_y; i++){
+            double current_gini = gini(data_set, size_y, i, j);
+            if(current_gini <= best_gini){
+                best_gini = current_gini;
+                column = j; 
+                row_split = i;
+                value = data_set[i][j];
             }
         } 
     } 
-    return best_split;
+    return new string[4]{ to_string(row_split), to_string(column), to_string(best_gini), value }; 
 }
 
-string SPRINT(string **data_set) {
-    double *best_split = bestGiniSplit(data_set, size_y);
-    cout << best_split[0] << " " << best_split[1] << " " << best_split[2] << endl; 
-    quicksort(data_set, 0, size_y -1, 1);
-    for(int i = 0; i < size_y; i++){
-        cout << data_set[i][0] << " " << data_set[i][1] << endl;
+void SPRINT(string **data_set, int size_y) {
+    string *best_split = bestGiniSplit(data_set, size_y);
+    int row_split = atoi(best_split[0].c_str());
+    int column = atoi(best_split[1].c_str());
+    double gini = atof(best_split[2].c_str());
+    string value = best_split[3];
+
+    cout << "Column: " << column  << " Gini: " << gini << " Value: " << value << endl;
+
+    if(gini < gini_threshold) return;
+
+    int left_size_y = row_split + 1;
+    int right_size_y = size_y - row_split - 1;
+
+    string **left_leaf = new string*[left_size_y];
+    string **right_leaf = new string*[right_size_y];
+
+    for(int i = 0; i < left_size_y; i++) {
+        left_leaf[i] = new string[size_x];
+        for(int j = 0; j < size_x; j++){
+            left_leaf[i][j] = data_set[i][j];
+        }
     }
+
+    for(int i = 0; i < right_size_y; i++) {
+        right_leaf[i] = new string[size_x];
+        for(int j = 0; j < size_x; j++){
+            right_leaf[i][j] = data_set[i+row_split][j];
+        }
+    }
+    SPRINT(left_leaf, left_size_y);
+    SPRINT(right_leaf, right_size_y);
 }
 
 int main(int argc, char *argv[]){
 
-    CSVReader<csv_width> in("abalone.data");
+    CSVReader<size_x> in("abalone.data");
     string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
 
     string **data_set = new string*[size_y];
@@ -128,11 +162,13 @@ int main(int argc, char *argv[]){
         data_set[i] = new string[size_x];
         in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
         sex = sex.compare("M") ? "1" : "0";
-        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings, "-1"};
+        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
         for(int j = 0; j < size_x; j++) {
             data_set[i][j] = line[j];
         }
     }
-    SPRINT(data_set);
+
+    SPRINT(data_set, size_y);
+
 }
 
