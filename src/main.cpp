@@ -7,7 +7,7 @@ using namespace io;
 const int size_y = 10;
 const int csv_width = 9; 
 const int size_x = 10;
-
+const int n_classes = 2;
 
 int divide(string **array, int start, int end, int column) {
     int left;
@@ -55,11 +55,41 @@ void quicksort(string **array, int start, int end, int column)
     }
 }
 
+double gini(string **data_set, int current_y_size, int split_row, int column) {
+   quicksort(data_set, 0, current_y_size - 1, column);
+   double **gini_matrix = new double*[2];
+   gini_matrix[0] = new double[n_classes];
+   gini_matrix[1] = new double[n_classes];
 
-string SPRINT(string **dataSet, int row, int column) {
-    quicksort(dataSet, row, size_y - 1, column);
-    for(int i = row; i < size_y; i++){
-        std::cout << dataSet[i][1] << std::endl;
+   double total_yes, total_no;
+
+   for(int i = 0; i < current_y_size; i++) {
+      if(i <= split_row){
+          gini_matrix[0][atoi(data_set[i][0].c_str())]++;
+          total_yes++;
+      }
+      else {
+          gini_matrix[1][atoi(data_set[i][0].c_str())]++;
+          total_no++;
+      }
+   }
+
+   double gini_yes, gini_no;
+
+   for(int j = 0; j < n_classes; j++){
+        gini_yes += gini_matrix[0][j]/total_yes;
+        gini_no += gini_matrix[1][j]/total_no;
+   }
+   gini_yes = (1 - gini_yes)*(total_yes/(double)n_classes);
+   gini_no = (1 - gini_no)*(total_no/(double)n_classes);
+   
+   return gini_yes + gini_no;
+
+}
+
+string SPRINT(string **data_set) {
+    for(int i = 0; i < size_y; i++){
+        std::cout << data_set[i][0] << std::endl;
     }
 }
 
@@ -68,16 +98,17 @@ int main(int argc, char *argv[]){
     CSVReader<csv_width> in("abalone.data");
     string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
 
-    string **dataSet = new string*[size_y];
+    string **data_set = new string*[size_y];
 
     for(int i = 0; i < size_y; i++){
-        dataSet[i] = new string[size_x];
+        data_set[i] = new string[size_x];
         in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
+        sex = sex.compare("M") ? "1" : "0";
         string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings, "-1"};
         for(int j = 0; j < size_x; j++) {
-           dataSet[i][j] = line[j];
+           data_set[i][j] = line[j];
         }
     }
-    SPRINT(dataSet, 0, 1);
+    SPRINT(data_set);
 }
 
