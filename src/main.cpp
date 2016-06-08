@@ -7,11 +7,12 @@
 using namespace std;
 using namespace io;
 
-const int size_y = 100;
-const int size_x = 9;
+const int size_y = 6;
+const int size_x = 3;
 const int n_classes = 2;
-const int max_tree_depth = 5;
-const double gini_threshold = 0.35;
+const double gini_threshold = 0.001;
+
+int *attrs = new int[size_x]{0,1,0};
 
 struct TreeNode {
     string *splitCondition;
@@ -67,7 +68,59 @@ void quicksort(string **array, int start, int end, int column)
     }
 }
 
-double* gini(string **data_set, int size_y, int split_row, int column) {
+
+double* gini_s(string **data_set, int size_y, int split_row, int column) {
+    double **gini_matrix = new double*[2];
+    for(int i = 0; i < 2; i++) {
+        gini_matrix[i] = new double[n_classes];
+        for(int j = 0; j < n_classes; j++){
+            gini_matrix[i][j] = 0;
+        }
+    }
+    double total_yes = 0;
+    double total_no = 0;
+
+    double *class_rank = new double[n_classes];
+
+    for(int i = 0; i < size_y; i++) {
+        int class_id = atoi(data_set[i][0].c_str());
+        class_rank[class_id]++;
+        if(data_set[split_row][column].compare(data_set[i][column])){
+            gini_matrix[0][class_id]++;
+            total_yes++;
+        }
+        else {
+            gini_matrix[1][class_id]++;
+            total_no++;
+        }
+    }
+
+    double gini_yes = 0;
+    double gini_no = 0;
+    int majority_class = -1;
+    int max_class_occurences = -1;
+
+    for(int j = 0; j < n_classes; j++){
+        if(class_rank[j] > max_class_occurences){
+            max_class_occurences = class_rank[j];
+            majority_class = j;
+        }
+        gini_yes += (gini_matrix[0][j]/total_yes)*(gini_matrix[0][j]/total_yes);
+        gini_no += (gini_matrix[1][j]/total_no)*(gini_matrix[1][j]/total_no);
+    }
+    gini_yes = (1 - gini_yes)*(total_yes/(double)size_y);
+    gini_no = (1 - gini_no)*(total_no/(double)size_y);
+
+    if(total_no == 0) 
+        gini_no = 0;
+    if(total_yes == 0)
+        gini_yes = 0;
+    return new double[2]{ gini_yes + gini_no, majority_class };
+
+}
+
+
+double* gini_n(string **data_set, int size_y, int split_row, int column) {
     double **gini_matrix = new double*[2];
     for(int i = 0; i < 2; i++) {
         gini_matrix[i] = new double[n_classes];
@@ -118,15 +171,17 @@ double* gini(string **data_set, int size_y, int split_row, int column) {
 }
 
 string* bestGiniSplit(string ** data_set, int size_y) {
-    double best_gini = 1;
+    double best_gini = 2;
     int row_split, column;
     string value;
     double majority_class = -1;
     for(int j = 1; j < size_x; j++) {
-        quicksort(data_set, 0, size_y - 1, j);
+        if(attrs[j] == 1) quicksort(data_set, 0, size_y - 1, j);
         for(int i = 0; i < size_y; i++){
-            double* current_gini = gini(data_set, size_y, i, j);
-            if(current_gini[0] <= best_gini){
+            double* current_gini = new double[2];
+            if(attrs[j] == 1) current_gini = gini_n(data_set, size_y, i, j);
+            else current_gini = gini_s(data_set, size_y, i, j);
+            if(current_gini[0] < best_gini){
                 best_gini = current_gini[0];
                 column = j; 
                 row_split = i;
@@ -135,7 +190,10 @@ string* bestGiniSplit(string ** data_set, int size_y) {
             }
         } 
     } 
-    return new string[5]{ to_string(row_split), to_string(column), to_string(best_gini), value, to_string(majority_class) }; 
+    if(best_gini < 2)
+        return new string[5]{ to_string(row_split), to_string(column), to_string(best_gini), value, to_string(majority_class) }; 
+    else 
+        return nullptr;
 }
 
 void printTree(TreeNode* p, int indent){
@@ -146,10 +204,10 @@ void printTree(TreeNode* p, int indent){
         if (indent) {
             cout << setw(indent) << ' ';
         }
-        if (p->right) cout<<" /\n" << setw(indent) << ' ';
+        if (p->right) cout<<"n /\n" << setw(indent) << ' ';
         cout<< "Col: " << p->splitCondition[1] << " <= " << p->splitCondition[3] << " Class: " << p-> splitCondition[4] << endl;
         if(p->left) {
-            cout << setw(indent) << ' ' <<" \\\n";
+            cout << setw(indent) << ' ' <<"y \\\n";
             printTree(p->left, indent+4);
         }
     }
@@ -157,10 +215,21 @@ void printTree(TreeNode* p, int indent){
 
 void SPRINT(string **data_set, int size_y, TreeNode* parent) {
     string *best_split = bestGiniSplit(data_set, size_y);
+    if(!best_split) return;
+
     int row_split = atoi(best_split[0].c_str());
-    int column = atoi(best_split[1].c_str());
     double gini = atof(best_split[2].c_str());
-    string value = best_split[3];
+
+    TreeNode* node = new TreeNode();
+    *node = { best_split, nullptr, nullptr, };
+    if(parent){
+        if(parent->left)
+            parent->right = node;
+        else
+            parent->left = node;
+    } else {
+        root = node;
+    }
 
     if(gini < gini_threshold) return;
 
@@ -184,16 +253,6 @@ void SPRINT(string **data_set, int size_y, TreeNode* parent) {
         }
     }
 
-    TreeNode* node = new TreeNode();
-    *node = { best_split, nullptr, nullptr, };
-    if(parent){
-        if(parent->left)
-            parent->right = node;
-        else
-            parent->left = node;
-    } else {
-        root = node;
-    }
 
     SPRINT(left_leaf, left_size_y, node);
     SPRINT(right_leaf, right_size_y, node);
@@ -202,20 +261,34 @@ void SPRINT(string **data_set, int size_y, TreeNode* parent) {
 
 int main(int argc, char *argv[]){
 
-    CSVReader<size_x> in("abalone.data");
-    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
-
     string **data_set = new string*[size_y];
+
+    /* CSVReader<size_x> in("abalone.data");
+       string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
+
+
+       for(int i = 0; i < size_y; i++){
+       data_set[i] = new string[size_x];
+       in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
+       sex = sex.compare("M") ? "1" : "0";
+       string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
+       for(int j = 0; j < size_x; j++) {
+       data_set[i][j] = line[j];
+       }
+       }*/
+
+    CSVReader<size_x> in("cars.data");
+    string risk, age, type;
 
     for(int i = 0; i < size_y; i++){
         data_set[i] = new string[size_x];
-        in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
-        sex = sex.compare("M") ? "1" : "0";
-        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
+        in.read_row(risk, age, type);
+        string line[] = {risk, age, type};
         for(int j = 0; j < size_x; j++) {
             data_set[i][j] = line[j];
         }
-    }
+    } 
+
     SPRINT(data_set, size_y, nullptr);
     printTree(root, 0);
 }
