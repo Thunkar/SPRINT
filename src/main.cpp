@@ -7,15 +7,19 @@
 using namespace std;
 using namespace io;
 
-const int size_y = 4000;
+// Dataset specific parameters + gini threshold for SPRINT stop condition
+const int size_y = 4177;
 const int size_x = 9;
-const int n_classes = 2;
-const double gini_threshold = 0.0001;
+const int n_classes = 3;
+const double gini_threshold = 0.4;
 
+// CSVReader has some internal static references that don't like using it for several datasets. Don't know how to fix it.
 CSVReader<size_x> in("abalone.data");
 
-int *attrs = new int[size_x]{0,1,1,1,1,1,1,1,1};
+// An array specifying which attributes of the dataset are numerical (1) and which are nominal (0). Bear in mind the first one is the class, which should be numerical (but is not used for building the tree, so it doesn't matter)
+int *attrs = new int[size_x]{0,0,1,1,1,1,1,1,1};
 
+// Struct representing an internal node of the classifier
 struct TreeNode {
     string *split_condition;
     int winning_class;
@@ -23,7 +27,7 @@ struct TreeNode {
     TreeNode *right; 
 };
 
-
+// Auxiliary method for quicksort ordering. Tailored to use the specified column of the dataset.
 int divide(string **array, int start, int end, int column) {
     int left;
     int right;
@@ -57,6 +61,7 @@ int divide(string **array, int start, int end, int column) {
     return right;
 }
 
+// Custom implementation of quicksort for two-dimensional arrays. Column is the column (duh) used for ordering.
 void quicksort(string **array, int start, int end, int column)
 {
     int pivot;
@@ -70,7 +75,7 @@ void quicksort(string **array, int start, int end, int column)
     }
 }
 
-
+// Calculates the gini measure of dissimilarity after splitting the dataset at the specified split_row, in relation to the attribute in column. Uses attrs to determine if column attribute is numerical or nominal.
 double gini(string **data_set, int size_y, int split_row, int column) {
     double **gini_matrix = new double*[2];
     for(int i = 0; i < 2; i++) {
@@ -124,6 +129,7 @@ double gini(string **data_set, int size_y, int split_row, int column) {
 
 }
 
+// Returns an array with the information needed to split the dataset optimally. {split_row, attr_column, gini_value, split_value}. The latter will be stored in the internal node of the classifier.
 string* bestGiniSplit(string ** data_set, int size_y) {
     double best_gini = 2;
     int row_split, column;
@@ -150,6 +156,7 @@ string* bestGiniSplit(string ** data_set, int size_y) {
         return nullptr;
 }
 
+// Utility method to print classifier trees. Only suitable for small ones (demonstration purpuses).
 void printTree(TreeNode* p, int indent){
     if(p) {
         if(p->right) {
@@ -170,6 +177,7 @@ void printTree(TreeNode* p, int indent){
     }
 }
 
+// Inserts a terminal node with the decision class at the bottom of the tree.
 void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
     if(size_y == 0) return;
     int *class_rank = new int[n_classes];
@@ -196,6 +204,7 @@ void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
     }
 }
 
+// Main recursive algorithm. Really poorly optimized. Sorry.
 void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
     string *best_split = bestGiniSplit(data_set, size_y);
     if(!best_split){
@@ -224,7 +233,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
     string **left_leaf;
     string **right_leaf;
 
-    if(attrs[column] == 0) {
+    if(attrs[column] == 0) { // If nominal attribute, use vectors to store the leafs temporarly (we don't know their size).
         vector<string*> left_leaf_vector;
         vector<string*> right_leaf_vector;
         for(int i = 0; i < size_y; i++) {
@@ -238,14 +247,17 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
         left_size_y = left_leaf_vector.size();
         right_size_y = right_leaf_vector.size();
 
-        for(int i = 0; i < left_size_y; i++) {
+        left_leaf = new string*[left_size_y];
+        right_leaf = new string*[right_size_y];
+
+        for(int i = 0; i < left_size_y; i++) { // This is ugly
             left_leaf[i] = new string[size_x];
             for(int j = 0; j < size_x; j++){
                 left_leaf[i][j] = left_leaf_vector[i][j];
             }
         }
 
-        for(int i = 0; i < right_size_y; i++) {
+        for(int i = 0; i < right_size_y; i++) { // Yep, still ugly
             right_leaf[i] = new string[size_x];
             for(int j = 0; j < size_x; j++){
                 right_leaf[i][j] = right_leaf_vector[i][j];
@@ -254,7 +266,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
     } else {
         left_leaf = new string*[left_size_y];
         right_leaf = new string*[right_size_y];
-        for(int i = 0; i < left_size_y; i++) {
+        for(int i = 0; i < left_size_y; i++) { // Pretty sure the memory can be copied in chunks in order to divide the dataset. Don't know how.
             left_leaf[i] = new string[size_x];
             for(int j = 0; j < size_x; j++){
                 left_leaf[i][j] = data_set[i][j];
@@ -269,18 +281,19 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
         }
     }
 
-    if(gini >= gini_threshold){
+    if(gini >= gini_threshold){ // Not there yet? Just keep splitting.
         SPRINT(left_leaf, left_size_y, root, node);
         SPRINT(right_leaf, right_size_y, root, node);
     } else {
-        insertTerminalNode(left_leaf, left_size_y, node);
-        if(right_size_y != 0)
+        insertTerminalNode(left_leaf, left_size_y, node); // If the desired threshold is reached, we insert the terminal nodes with their decision class...
+        if(right_size_y != 0) // However, if one of the leaves is empty, we copy it, since the class decision will be the same.
             insertTerminalNode(right_leaf, right_size_y, node);
         else
             insertTerminalNode(left_leaf, left_size_y, node);
     }
 }
 
+// Takes a test set and transverses the tree for each sample, in order to build the confusion matrix of the classifier.
 int** classify(string **data_set, int size_y, TreeNode* classifier) {
     int** confusion_matrix = new int*[n_classes];
     for(int i = 0; i < n_classes; i++) {
@@ -315,7 +328,7 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
     return confusion_matrix;
 } 
 
-
+// Reads the small input test (cars dataset from the slides)
 void read_cars(string** data_set) {
     string risk, age, type;
 
@@ -329,22 +342,23 @@ void read_cars(string** data_set) {
     } 
 }
 
+// Reads the abalone dataset, performing some preprocessing.
 void read_abalone(string** data_set) {
-    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
-
+    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight;
+    int rings;
 
     for(int i = 0; i < size_y; i++){
         data_set[i] = new string[size_x];
         in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
-        sex = sex.compare("M") ? "1" : "0";
-        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
+        rings = rings < 9 ? 0 : (rings < 15 ? 1 : 2);
+        string line[] = {to_string(rings), sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight};
         for(int j = 0; j < size_x; j++) {
             data_set[i][j] = line[j];
         }
     }
 }
 
-
+// There you go
 int main(int argc, char *argv[]){
 
     string **data_set = new string*[size_y];
@@ -352,8 +366,8 @@ int main(int argc, char *argv[]){
 
     TreeNode *root; 
     SPRINT(data_set, size_y, root, nullptr);
-    cout << "=========== Decision Tree ==========" << endl;
-    //   printTree(root, 0);
+    //cout << "=========== Decision Tree ==========" << endl;
+    //printTree(root, 0);
     cout << endl << "========= Confusion Matrix ========" << endl;
     int** confusion_matrix = classify(data_set, size_y, root);
     int success = 0;
