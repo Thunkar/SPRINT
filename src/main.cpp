@@ -310,8 +310,6 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
         }
         int real_class = atoi(data_set[i][0].c_str());
         int winning_class = current_node->winning_class;
-        if(winning_class != 0 && winning_class != 1)
-            cout << winning_class << endl;
         confusion_matrix[real_class][winning_class]++;     
     }
     return confusion_matrix;
