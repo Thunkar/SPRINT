@@ -7,21 +7,22 @@
 using namespace std;
 using namespace io;
 
-const int size_y = 6;
-const int size_x = 3;
+const int size_y = 4000;
+const int size_x = 9;
 const int n_classes = 2;
-const double gini_threshold = 0.001;
+const double gini_threshold = 0.0001;
 
-int *attrs = new int[size_x]{0,1,0};
+CSVReader<size_x> in("abalone.data");
+
+int *attrs = new int[size_x]{0,1,1,1,1,1,1,1,1};
 
 struct TreeNode {
-    string *splitCondition;
+    string *split_condition;
     int winning_class;
     TreeNode *left; 
     TreeNode *right; 
 };
 
-TreeNode* root;
 
 int divide(string **array, int start, int end, int column) {
     int left;
@@ -136,7 +137,10 @@ string* bestGiniSplit(string ** data_set, int size_y) {
                 best_gini = current_gini;
                 column = j; 
                 row_split = i;
-                value = data_set[i][j];
+                if(attrs[j] == 1 && i < size_y - 1)
+                    value = to_string((atof(data_set[i][j].c_str())+atof(data_set[i+1][j].c_str()))/2);
+                else 
+                    value = data_set[i][j];
             }
         } 
     } 
@@ -147,7 +151,7 @@ string* bestGiniSplit(string ** data_set, int size_y) {
 }
 
 void printTree(TreeNode* p, int indent){
-    if(p != NULL) {
+    if(p) {
         if(p->right) {
             printTree(p->right, indent+4);
         }
@@ -155,8 +159,8 @@ void printTree(TreeNode* p, int indent){
             cout << setw(indent) << ' ';
         }
         if (p->right) cout<<"n /\n" << setw(indent) << ' ';
-        if(p->splitCondition)
-            cout<< "Col: " << p->splitCondition[1] << " <= " << p->splitCondition[3] << endl;
+        if(p->split_condition)
+            cout<< "Col: " << p->split_condition[1] << " <= " << p->split_condition[3] << endl;
         else 
             cout << "Class: " << p->winning_class << endl;
         if(p->left) {
@@ -167,11 +171,12 @@ void printTree(TreeNode* p, int indent){
 }
 
 void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
+    if(size_y == 0) return;
     int *class_rank = new int[n_classes];
     for(int i = 0; i < n_classes; i++) {
         class_rank[i] = 0;
     }
-    int max_class_rank = 0;
+    int max_class_rank = -1;
     int winning_class = -1;
     for(int i = 0; i < size_y; i++) {
         int current_class = atoi(data_set[i][0].c_str());
@@ -180,6 +185,7 @@ void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
             winning_class = current_class;
         }
     } 
+
     TreeNode* node = new TreeNode();
     *node = { nullptr, winning_class, nullptr, nullptr, };
     if(parent){
@@ -187,12 +193,10 @@ void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
             parent->right = node;
         else
             parent->left = node;
-    } else {
-        root = node;
     }
 }
 
-void SPRINT(string **data_set, int size_y, TreeNode* parent) {
+void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
     string *best_split = bestGiniSplit(data_set, size_y);
     if(!best_split){
         insertTerminalNode(data_set, size_y, parent);
@@ -266,11 +270,79 @@ void SPRINT(string **data_set, int size_y, TreeNode* parent) {
     }
 
     if(gini >= gini_threshold){
-        SPRINT(left_leaf, left_size_y, node);
-        SPRINT(right_leaf, right_size_y, node);
+        SPRINT(left_leaf, left_size_y, root, node);
+        SPRINT(right_leaf, right_size_y, root, node);
     } else {
         insertTerminalNode(left_leaf, left_size_y, node);
-        insertTerminalNode(right_leaf, right_size_y, node);
+        if(right_size_y != 0)
+            insertTerminalNode(right_leaf, right_size_y, node);
+        else
+            insertTerminalNode(left_leaf, left_size_y, node);
+    }
+}
+
+int** classify(string **data_set, int size_y, TreeNode* classifier) {
+    int** confusion_matrix = new int*[n_classes];
+    for(int i = 0; i < n_classes; i++) {
+        confusion_matrix[i] = new int[n_classes];
+        for(int j = 0; j < n_classes; j++) {
+            confusion_matrix[i][j] = 0;
+        }
+    }
+    for(int i = 0; i < size_y; i++) {
+        TreeNode* current_node = classifier;
+        while(current_node->split_condition){
+            int current_column = atoi(current_node->split_condition[1].c_str());
+            string current_value = data_set[i][current_column];
+            string split_value = current_node->split_condition[3];
+            if(attrs[current_column] == 1){
+                if(atof(current_value.c_str()) <= atof(split_value.c_str()))
+                    current_node = current_node->left;
+                else
+                    current_node = current_node->right;
+
+            } else {
+                if(split_value.compare(current_value) == 0)
+                    current_node = current_node->left;
+                else 
+                    current_node = current_node->right;
+            }
+        }
+        int real_class = atoi(data_set[i][0].c_str());
+        int winning_class = current_node->winning_class;
+        if(winning_class != 0 && winning_class != 1)
+            cout << winning_class << endl;
+        confusion_matrix[real_class][winning_class]++;     
+    }
+    return confusion_matrix;
+} 
+
+
+void read_cars(string** data_set) {
+    string risk, age, type;
+
+    for(int i = 0; i < size_y; i++){
+        data_set[i] = new string[size_x];
+        //        in.read_row(risk, age, type);
+        string line[] = {risk, age, type};
+        for(int j = 0; j < size_x; j++) {
+            data_set[i][j] = line[j];
+        }
+    } 
+}
+
+void read_abalone(string** data_set) {
+    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
+
+
+    for(int i = 0; i < size_y; i++){
+        data_set[i] = new string[size_x];
+        in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
+        sex = sex.compare("M") ? "1" : "0";
+        string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
+        for(int j = 0; j < size_x; j++) {
+            data_set[i][j] = line[j];
+        }
     }
 }
 
@@ -278,34 +350,24 @@ void SPRINT(string **data_set, int size_y, TreeNode* parent) {
 int main(int argc, char *argv[]){
 
     string **data_set = new string*[size_y];
+    read_abalone(data_set);
 
-    /* CSVReader<size_x> in("abalone.data");
-       string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings;
-
-
-       for(int i = 0; i < size_y; i++){
-       data_set[i] = new string[size_x];
-       in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
-       sex = sex.compare("M") ? "1" : "0";
-       string line[] = {sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings};
-       for(int j = 0; j < size_x; j++) {
-       data_set[i][j] = line[j];
-       }
-       }*/
-
-    CSVReader<size_x> in("cars.data");
-    string risk, age, type;
-
-    for(int i = 0; i < size_y; i++){
-        data_set[i] = new string[size_x];
-        in.read_row(risk, age, type);
-        string line[] = {risk, age, type};
-        for(int j = 0; j < size_x; j++) {
-            data_set[i][j] = line[j];
+    TreeNode *root; 
+    SPRINT(data_set, size_y, root, nullptr);
+    cout << "=========== Decision Tree ==========" << endl;
+    //   printTree(root, 0);
+    cout << endl << "========= Confusion Matrix ========" << endl;
+    int** confusion_matrix = classify(data_set, size_y, root);
+    int success = 0;
+    int error = 0;
+    for(int i = 0; i < n_classes; i++) {
+        for(int j = 0; j < n_classes; j++) {
+            if(i == j) success+=confusion_matrix[i][j];
+            else error+=confusion_matrix[i][j];
+            cout << confusion_matrix[i][j] << " ";
         }
-    } 
-
-    SPRINT(data_set, size_y, nullptr);
-    printTree(root, 0);
+        cout << endl;
+    }
+    cout << "Success: " << (double)success/(double)size_y << " Error: " << (double)error/(double)size_y << endl;
 }
 
