@@ -2,22 +2,17 @@
 # include "csv.h"
 # include "math.h"
 # include <iomanip>
+# include <sstream>
+# include <fstream>
+# include <random>
 
 
 using namespace std;
 using namespace io;
 
-// Dataset specific parameters + gini threshold for SPRINT stop condition
-const int size_y = 6;
-const int size_x = 3;
-const int n_classes = 2;
-const double gini_threshold = 0.1;
-
-// CSVReader has some internal static references that don't like using it for several datasets. Don't know how to fix it.
-CSVReader<size_x> in("cars.data");
-
-// An array specifying which attributes of the dataset are numerical (1) and which are nominal (0). Bear in mind the first one is the class, which should be numerical (but is not used for building the tree, so it doesn't matter)
-int *attrs = new int[size_x]{0,1,0};
+int size_y, size_x, n_classes;
+double gini_threshold;
+int* attrs;
 
 // Struct representing an internal node of the classifier
 struct TreeNode {
@@ -274,7 +269,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
         }
     }
 
-    if(right_size_y > 0){ // Not there yet? Just keep splitting.
+    if(right_size_y > 0){ 
         TreeNode* node = new TreeNode();
         *node = { best_split, -1, nullptr, nullptr, };
         if(parent){
@@ -289,7 +284,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
             SPRINT(left_leaf, left_size_y, root, node);
             SPRINT(right_leaf, right_size_y, root, node);
         } else {
-            insertTerminalNode(left_leaf, left_size_y, node); // If the desired threshold is reached, we insert the terminal nodes with their decision class...
+            insertTerminalNode(left_leaf, left_size_y, node);
             insertTerminalNode(right_leaf, right_size_y, node);
         }
     } else {
@@ -332,84 +327,87 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
     return confusion_matrix;
 } 
 
-// Reads the small input test (cars dataset from the slides)
-void read_cars(string** data_set) {
-    string risk, age, type;
-
-    for(int i = 0; i < size_y; i++){
-        data_set[i] = new string[size_x];
-        in.read_row(risk, age, type);
-        string line[] = {risk, age, type};
-        for(int j = 0; j < size_x; j++) {
-            data_set[i][j] = line[j];
-        }
+void sample(string** data_set, int n, string** sample_set){ 
+  //string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight; 
+  int rings; 
+    int size,rand_index, max = size_x-1, temp, r; 
+    int attr_selection[size_x]; 
+    for(int j=0;j<size_x+1;j++) 
+      attr_selection[j]=j+1; 
+     
+    size=static_cast<int>(2/3*size_y); 
+     
+    default_random_engine generator; 
+    uniform_int_distribution<int> distribution_x(0,size_y-1); 
+    uniform_int_distribution<int> distribution_y(0,size_x-1); 
+     
+    while(max!=0){   
+      r = distribution_x(generator); 
+      temp = attr_selection[r]; 
+      attr_selection[r]=attr_selection[max]; 
+      attr_selection[max]=temp; 
+      max--; 
     } 
-}
-
-// Reads the abalone dataset, performing some preprocessing.
-void read_abalone(string** data_set) {
-    string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight;
-    int rings;
-
-    for(int i = 0; i < size_y; i++){
-        data_set[i] = new string[size_x];
-        //in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
-        rings = rings < 9 ? 0 : (rings < 15 ? 1 : 2);
-        string line[] = {to_string(rings), sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight};
-        for(int j = 0; j < size_x; j++) {
-            data_set[i][j] = line[j];
-        }
-    }
-}
-
-
-
-void make_sample(string** data_set, int n, string** sample_set){
-	//string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight;
-	int rings;
-    int size,rand_index, max = size_x-1, temp, r;
-    int attr_selection[size_x];
-    for(int j=0;j<size_x+1;j++)
-    	attr_selection[j]=j+1;
-    
-    size=static_cast<int>(2/3*size_y);
-    
-    std::default_random_engine generator;
-    std::uniform_int_distribution<int> distribution_x(0,size_y-1);
-    std::uniform_int_distribution<int> distribution_y(0,size_x-1);
-    
-    while(max!=0){	
-    	r = distribution_x(generator);
-    	temp = attr_selection[r];
-    	attr_selection[r]=attr_selection[max];
-    	attr_selection[max]=temp;
-    	max--;
-    }
-    
-    
-    for(int i=0;i<size;i++){
-    	rand_index = distribution_y(generator);
-    	for(int k=0;k<n;k++){
-    		if(k==0){
-    			sample_set[i][k]=data_set[rand_index][0];
-    		}
-    		else{
-	    		sample_set[i][k]=data_set[rand_index][attr_selection[k]];
-	    	}
-    	}
-    }
-}
+     
+     
+    for(int i=0;i<size;i++){ 
+      rand_index = distribution_y(generator); 
+      for(int k=0;k<n;k++){ 
+        if(k==0){ 
+          sample_set[i][k]=data_set[rand_index][0]; 
+        } 
+        else{ 
+          sample_set[i][k]=data_set[rand_index][attr_selection[k]]; 
+        } 
+      } 
+    } 
+} 
 
 // There you go
 int main(int argc, char *argv[]){
 
+    ifstream configfs;
+    configfs.open("config.cnf");
+    string line;
+    getline(configfs, line);
+    string data_set_name = string(line);
+    getline(configfs, line);
+    size_y = atoi(line.c_str());
+    getline(configfs, line);
+    size_x = atoi(line.c_str());
+    getline(configfs, line);
+    n_classes = atoi(line.c_str());
+    getline(configfs, line);
+    gini_threshold = atof(line.c_str());
+    getline(configfs, line);;
+    attrs = new int[size_x];
+    istringstream attrss(line);
+    string token;
+    for(int j = 0; j < size_x; j++) {
+        getline(attrss, token, ',');
+        attrs[j] = atoi(token.c_str()); 
+    }
+    
     string **data_set = new string*[size_y];
-    read_cars(data_set);
+
+    ifstream datafs;
+    datafs.open(data_set_name);
+    for(int i = 0; i < size_y; i++) {
+        string line;
+        getline(datafs, line);
+        istringstream liness(line);
+        string token;
+        data_set[i] = new string[size_x];
+        for(int j = 0; j < size_x; j++){
+            getline(liness, token, ',');
+            data_set[i][j] = token;    
+        }
+    }
 
     TreeNode *root; 
     SPRINT(data_set, size_y, root, nullptr);
     //cout << "=========== Decision Tree ==========" << endl;
-    printTree(root, 0);
+    //printTree(root, 0);
     cout << endl << "========= Confusion Matrix ========" << endl;
     int** confusion_matrix = classify(data_set, size_y, root);
     int success = 0;
