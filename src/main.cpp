@@ -362,6 +362,44 @@ void read_abalone(string** data_set) {
     }
 }
 
+
+
+void make_sample(string** data_set, int n, string** sample_set){
+	//string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight;
+	int rings;
+    int size,rand_index, max = size_x-1, temp, r;
+    int attr_selection[size_x];
+    for(int j=0;j<size_x+1;j++)
+    	attr_selection[j]=j+1;
+    
+    size=static_cast<int>(2/3*size_y);
+    
+    std::default_random_engine generator;
+    std::uniform_int_distribution<int> distribution_x(0,size_y-1);
+    std::uniform_int_distribution<int> distribution_y(0,size_x-1);
+    
+    while(max!=0){	
+    	r = distribution_x(generator);
+    	temp = attr_selection[r];
+    	attr_selection[r]=attr_selection[max];
+    	attr_selection[max]=temp;
+    	max--;
+    }
+    
+    
+    for(int i=0;i<size;i++){
+    	rand_index = distribution_y(generator);
+    	for(int k=0;k<n;k++){
+    		if(k==0){
+    			sample_set[i][k]=data_set[rand_index][0];
+    		}
+    		else{
+	    		sample_set[i][k]=data_set[rand_index][attr_selection[k]];
+	    	}
+    	}
+    }
+}
+
 // There you go
 int main(int argc, char *argv[]){
 
