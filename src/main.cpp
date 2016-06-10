@@ -8,16 +8,16 @@ using namespace std;
 using namespace io;
 
 // Dataset specific parameters + gini threshold for SPRINT stop condition
-const int size_y = 4177;
-const int size_x = 9;
-const int n_classes = 3;
-const double gini_threshold = 0.4;
+const int size_y = 6;
+const int size_x = 3;
+const int n_classes = 2;
+const double gini_threshold = 0.1;
 
 // CSVReader has some internal static references that don't like using it for several datasets. Don't know how to fix it.
-CSVReader<size_x> in("abalone.data");
+CSVReader<size_x> in("cars.data");
 
 // An array specifying which attributes of the dataset are numerical (1) and which are nominal (0). Bear in mind the first one is the class, which should be numerical (but is not used for building the tree, so it doesn't matter)
-int *attrs = new int[size_x]{0,0,1,1,1,1,1,1,1};
+int *attrs = new int[size_x]{0,1,0};
 
 // Struct representing an internal node of the classifier
 struct TreeNode {
@@ -202,6 +202,9 @@ void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
         else
             parent->left = node;
     }
+    for(int i = 0; i < size_y; i++){
+        delete[] data_set[i];
+    }
 }
 
 // Main recursive algorithm. Really poorly optimized. Sorry.
@@ -216,16 +219,6 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
     int column = atoi(best_split[1].c_str());
     double gini = atof(best_split[2].c_str());
 
-    TreeNode* node = new TreeNode();
-    *node = { best_split, -1, nullptr, nullptr, };
-    if(parent){
-        if(parent->left)
-            parent->right = node;
-        else
-            parent->left = node;
-    } else {
-        root = node;
-    }
 
     int left_size_y = row_split + 1;
     int right_size_y = size_y - row_split - 1;
@@ -281,15 +274,26 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
         }
     }
 
-    if(gini >= gini_threshold){ // Not there yet? Just keep splitting.
-        SPRINT(left_leaf, left_size_y, root, node);
-        SPRINT(right_leaf, right_size_y, root, node);
-    } else {
-        insertTerminalNode(left_leaf, left_size_y, node); // If the desired threshold is reached, we insert the terminal nodes with their decision class...
-        if(right_size_y != 0) // However, if one of the leaves is empty, we copy it, since the class decision will be the same.
+    if(right_size_y > 0){ // Not there yet? Just keep splitting.
+        TreeNode* node = new TreeNode();
+        *node = { best_split, -1, nullptr, nullptr, };
+        if(parent){
+            if(parent->left)
+                parent->right = node;
+            else
+                parent->left = node;
+        } else {
+            root = node;
+        }
+        if(gini >= gini_threshold){
+            SPRINT(left_leaf, left_size_y, root, node);
+            SPRINT(right_leaf, right_size_y, root, node);
+        } else {
+            insertTerminalNode(left_leaf, left_size_y, node); // If the desired threshold is reached, we insert the terminal nodes with their decision class...
             insertTerminalNode(right_leaf, right_size_y, node);
-        else
-            insertTerminalNode(left_leaf, left_size_y, node);
+        }
+    } else {
+        insertTerminalNode(left_leaf, left_size_y, parent);
     }
 }
 
@@ -334,7 +338,7 @@ void read_cars(string** data_set) {
 
     for(int i = 0; i < size_y; i++){
         data_set[i] = new string[size_x];
-        //        in.read_row(risk, age, type);
+        in.read_row(risk, age, type);
         string line[] = {risk, age, type};
         for(int j = 0; j < size_x; j++) {
             data_set[i][j] = line[j];
@@ -349,7 +353,7 @@ void read_abalone(string** data_set) {
 
     for(int i = 0; i < size_y; i++){
         data_set[i] = new string[size_x];
-        in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
+        //in.read_row(sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight, rings);
         rings = rings < 9 ? 0 : (rings < 15 ? 1 : 2);
         string line[] = {to_string(rings), sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight};
         for(int j = 0; j < size_x; j++) {
@@ -362,12 +366,12 @@ void read_abalone(string** data_set) {
 int main(int argc, char *argv[]){
 
     string **data_set = new string*[size_y];
-    read_abalone(data_set);
+    read_cars(data_set);
 
     TreeNode *root; 
     SPRINT(data_set, size_y, root, nullptr);
     //cout << "=========== Decision Tree ==========" << endl;
-    //printTree(root, 0);
+    printTree(root, 0);
     cout << endl << "========= Confusion Matrix ========" << endl;
     int** confusion_matrix = classify(data_set, size_y, root);
     int success = 0;
