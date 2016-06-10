@@ -144,8 +144,14 @@ string* bestGiniSplit(string ** data_set, int size_y) {
             }
         } 
     } 
-    if(best_gini < 2)
-        return new string[4]{ to_string(row_split), to_string(column), to_string(best_gini), value}; 
+    if(best_gini < 2){
+		string *str = new string[4];
+		str[0] = to_string(row_split);
+		str[1] = to_string(column);
+		str[2] = to_string(best_gini);
+		str[3] = value;
+		return str;
+	}
     else 
         return nullptr;
 }
@@ -189,7 +195,10 @@ void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
     } 
 
     TreeNode* node = new TreeNode();
-    *node = { nullptr, winning_class, nullptr, nullptr, };
+	node->split_condition = nullptr;
+	node->winning_class = winning_class;
+	node->left = nullptr;
+	node->right = nullptr;
     if(parent){
         if(parent->left)
             parent->right = node;
@@ -270,7 +279,10 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
 
     if(right_size_y > 0){ 
         TreeNode* node = new TreeNode();
-        *node = { best_split, -1, nullptr, nullptr, };
+		node->split_condition = best_split;
+		node->winning_class = -1;
+		node->left = nullptr;
+		node->right = nullptr;
         if(parent){
             if(parent->left)
                 parent->right = node;
