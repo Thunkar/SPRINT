@@ -1,14 +1,13 @@
 # include <iostream>
-# include "csv.h"
 # include "math.h"
 # include <iomanip>
 # include <sstream>
 # include <fstream>
 # include <random>
+# include <algorithm>
 
 
 using namespace std;
-using namespace io;
 
 int size_y, size_x, n_classes;
 double gini_threshold;
@@ -327,44 +326,52 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
     return confusion_matrix;
 } 
 
-void sample(string** data_set, int n, string** sample_set){ 
-  //string sex, length, diameter, height, wholeWeight, shuckedWeight, visceraWeight, shellWeight; 
-  int rings; 
-    int size,rand_index, max = size_x-1, temp, r; 
-    int attr_selection[size_x]; 
-    for(int j=0;j<size_x+1;j++) 
-      attr_selection[j]=j+1; 
-     
-    size=static_cast<int>(2/3*size_y); 
-     
-    default_random_engine generator; 
-    uniform_int_distribution<int> distribution_x(0,size_y-1); 
-    uniform_int_distribution<int> distribution_y(0,size_x-1); 
-     
-    while(max!=0){   
-      r = distribution_x(generator); 
-      temp = attr_selection[r]; 
-      attr_selection[r]=attr_selection[max]; 
-      attr_selection[max]=temp; 
-      max--; 
-    } 
-     
-     
-    for(int i=0;i<size;i++){ 
-      rand_index = distribution_y(generator); 
-      for(int k=0;k<n;k++){ 
-        if(k==0){ 
-          sample_set[i][k]=data_set[rand_index][0]; 
-        } 
-        else{ 
-          sample_set[i][k]=data_set[rand_index][attr_selection[k]]; 
-        } 
-      } 
-    } 
-} 
+double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_set_index, int test_set_size) {
+    int training_set_size = (k-1)*test_set_size;
+    string **test_set = new string*[test_set_size];
+    string **training_set;
+    TreeNode *root; 
+
+    for(int i = 0; i < test_set_size; i++) {
+        test_set[i] = new string[size_x]; 
+        for(int j = 0; j < size_x; j++) {
+            test_set[i][j] = data_set[k_matrix[test_set_index][i]][j];
+        }
+    }
+
+    if(training_set_size > 0){
+        training_set = new string*[training_set_size];
+        for(int i = 0; i < training_set_size; i++) {
+            training_set[i] = new string[size_x]; 
+            int k_matrix_row = (int)((double)i/(double)test_set_size);
+            int k_matrix_column = i - test_set_size*k_matrix_row;
+            k_matrix_row = k_matrix_row >= test_set_index ? k_matrix_row : k_matrix_row + 1;
+            for(int j = 0; j < size_x; j++) {
+                training_set[i][j] = data_set[k_matrix[k_matrix_row][k_matrix_column]][j];
+            }
+        }
+        SPRINT(training_set, training_set_size, root, nullptr);
+    } else {
+        SPRINT(test_set, test_set_size, root, nullptr);
+    }
+    int** confusion_matrix = classify(test_set, test_set_size, root);
+    int success = 0;
+    int error = 0;
+    for(int i = 0; i < n_classes; i++) {
+        for(int j = 0; j < n_classes; j++) {
+            if(i == j) success+=confusion_matrix[i][j];
+            else error+=confusion_matrix[i][j];
+        }
+    }
+    double success_ratio = (double)success/(double)test_set_size; 
+    cout << "Success ratio of partition: " << test_set_index << " -> " << success_ratio << endl;
+    return success_ratio;
+}
 
 // There you go
 int main(int argc, char *argv[]){
+
+    cout << "Reading configuration file" << endl;
 
     ifstream configfs;
     configfs.open("config.cnf");
@@ -387,8 +394,17 @@ int main(int argc, char *argv[]){
         getline(attrss, token, ',');
         attrs[j] = atoi(token.c_str()); 
     }
-    
+
+    getline(configfs, line);
+    int k = atoi(line.c_str());
+
+    int test_set_size = (int)((double)size_y/(double)k);
+
     string **data_set = new string*[size_y];
+    int *indexes = new int[size_y];
+    int counter = 0;
+
+    cout << "Loading dataset into memory" << endl;
 
     ifstream datafs;
     datafs.open(data_set_name);
@@ -398,28 +414,32 @@ int main(int argc, char *argv[]){
         istringstream liness(line);
         string token;
         data_set[i] = new string[size_x];
+        indexes[i] = counter++;
         for(int j = 0; j < size_x; j++){
             getline(liness, token, ',');
             data_set[i][j] = token;    
         }
     }
 
-    TreeNode *root; 
-    SPRINT(data_set, size_y, root, nullptr);
-    //cout << "=========== Decision Tree ==========" << endl;
-    //printTree(root, 0);
-    cout << endl << "========= Confusion Matrix ========" << endl;
-    int** confusion_matrix = classify(data_set, size_y, root);
-    int success = 0;
-    int error = 0;
-    for(int i = 0; i < n_classes; i++) {
-        for(int j = 0; j < n_classes; j++) {
-            if(i == j) success+=confusion_matrix[i][j];
-            else error+=confusion_matrix[i][j];
-            cout << confusion_matrix[i][j] << " ";
-        }
-        cout << endl;
-    }
-    cout << "Success: " << (double)success/(double)size_y << " Error: " << (double)error/(double)size_y << endl;
-}
+    random_shuffle(&indexes[0],&indexes[size_y - 1]);
 
+    int **k_matrix = new int*[k];
+
+    for(int i = 0; i < k; i++) {
+        k_matrix[i] = new int[test_set_size];
+        for(int j = 0; j < test_set_size; j++) {
+            k_matrix[i][j] = indexes[i*test_set_size+j];
+        }
+    }
+
+    int test_set_index = 0;
+    double acc_success_ratio = 0;
+
+    cout << "Building classifiers..." << endl;
+
+    for(int i = 0; i < k; i++){
+        acc_success_ratio+= kFoldCrossValidation(data_set, k, k_matrix, test_set_index++, test_set_size);
+    }
+
+    cout << "Total success ratio after cross-validation: " << acc_success_ratio/(double)k << endl;
+}
