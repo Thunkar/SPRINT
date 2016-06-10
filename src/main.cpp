@@ -373,8 +373,12 @@ int main(int argc, char *argv[]){
 
     cout << "Reading configuration file" << endl;
 
-    ifstream configfs;
-    configfs.open("config.cnf");
+	ifstream configfs;
+	configfs.open("config.cnf");
+	if (!configfs) {
+		std::cout << "Failed to open the configuration file." << std::endl;
+		return 1;
+	}
     string line;
     getline(configfs, line);
     string data_set_name = string(line);
@@ -386,7 +390,7 @@ int main(int argc, char *argv[]){
     n_classes = atoi(line.c_str());
     getline(configfs, line);
     gini_threshold = atof(line.c_str());
-    getline(configfs, line);;
+    getline(configfs, line);
     attrs = new int[size_x];
     istringstream attrss(line);
     string token;
@@ -406,8 +410,12 @@ int main(int argc, char *argv[]){
 
     cout << "Loading dataset into memory" << endl;
 
-    ifstream datafs;
-    datafs.open(data_set_name);
+	ifstream datafs;
+	datafs.open(data_set_name);
+	if (!datafs) {
+		std::cout << "Failed to open the dataset file." << std::endl;
+		return 1;
+	}
     for(int i = 0; i < size_y; i++) {
         string line;
         getline(datafs, line);
