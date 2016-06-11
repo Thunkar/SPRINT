@@ -418,12 +418,12 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
 			else error += confusion_matrix[i][j];
 		}
 	}
-
-	for (int i = 0; i < training_set_size; i++) {
-		delete[] training_set[i];
+	if (training_set_size>0) {
+		for (int i = 0; i < training_set_size; i++) {
+			delete[] training_set[i];
+		}
+		delete[] training_set;
 	}
-	delete[] training_set;
-
 	for (int i = 0; i < test_set_size; i++) {
 		delete[] test_set[i];
 	}
