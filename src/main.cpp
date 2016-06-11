@@ -6,7 +6,6 @@
 # include <random>
 # include <algorithm>
 
-
 using namespace std;
 
 int size_y, size_x, n_classes;
@@ -351,6 +350,8 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
         }
     }
 
+    clock_t begin;
+
     if(training_set_size > 0){
         training_set = new string*[training_set_size];
         for(int i = 0; i < training_set_size; i++) {
@@ -362,11 +363,21 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
                 training_set[i][j] = data_set[k_matrix[k_matrix_row][k_matrix_column]][j];
             }
         }
+        begin = clock();
         SPRINT(training_set, training_set_size, root, nullptr);
     } else {
+        begin = clock();
         SPRINT(test_set, test_set_size, root, nullptr);
     }
+
+    clock_t end = clock();
+    double sprint_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+
+    begin = clock();
     int** confusion_matrix = classify(test_set, test_set_size, root);
+    end = clock();
+
+    double classify_elapsed = double(end - begin) / CLOCKS_PER_SEC;
     int success = 0;
     int error = 0;
     for(int i = 0; i < n_classes; i++) {
@@ -377,6 +388,7 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
     }
     double success_ratio = (double)success/(double)test_set_size; 
     cout << "Success ratio of partition: " << test_set_index << " -> " << success_ratio << endl;
+    cout << "Time to build the classifier: " << sprint_elapsed << "s. Time to classify the test data: " << classify_elapsed << "s." << endl;
     return success_ratio;
 }
 
@@ -386,7 +398,7 @@ int main(int argc, char *argv[]){
     cout << "Reading configuration file" << endl;
 
 	ifstream configfs;
-	configfs.open("config.cnf");
+	configfs.open("sprint.cnf");
 	if (!configfs) {
 		std::cout << "Failed to open the configuration file." << std::endl;
 		return 1;
