@@ -5,6 +5,7 @@
 # include <fstream>
 # include <random>
 # include <algorithm>
+# include <set>
 
 using namespace std;
 
@@ -77,6 +78,7 @@ double gini(string **data_set, int size_y, int split_row, int column) {
 			gini_matrix[i][j] = 0;
 		}
 	}
+
 	double total_yes = 0;
 	double total_no = 0;
 
@@ -133,9 +135,16 @@ string* bestGiniSplit(string ** data_set, int size_y) {
 	int row_split, column;
 	string value;
 	double majority_class = -1;
+    set<string> nominal_already_checked;
 	for (int j = 1; j < size_x; j++) {
 		if (attrs[j] == 1) quicksort(data_set, 0, size_y - 1, j);
 		for (int i = 0; i < size_y; i++) {
+            if(attrs[j] == 0){
+                if(nominal_already_checked.find(data_set[i][j]) != nominal_already_checked.end())
+                    continue;
+                else 
+                    nominal_already_checked.insert(data_set[i][j]);
+            }
 			double current_gini = gini(data_set, size_y, i, j);
 			if (current_gini < best_gini) {
 				best_gini = current_gini;
