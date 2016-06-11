@@ -358,7 +358,7 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
             training_set[i] = new string[size_x]; 
             int k_matrix_row = (int)((double)i/(double)test_set_size);
             int k_matrix_column = i - test_set_size*k_matrix_row;
-            k_matrix_row = k_matrix_row >= test_set_index ? k_matrix_row : k_matrix_row + 1;
+            k_matrix_row = k_matrix_row < test_set_index ? k_matrix_row : k_matrix_row + 1;
             for(int j = 0; j < size_x; j++) {
                 training_set[i][j] = data_set[k_matrix[k_matrix_row][k_matrix_column]][j];
             }
