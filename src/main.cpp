@@ -6,6 +6,9 @@
 # include <random>
 # include <algorithm>
 # include <set>
+#include <cstring>
+#include <map>
+#include <utility>
 
 using namespace std;
 
@@ -20,6 +23,43 @@ struct TreeNode {
 	TreeNode *left;
 	TreeNode *right;
 };
+// Struct to store 
+struct SampleData {
+	//int size_sample = size_y/3;
+	int *data_ids;
+	SampleData(int indexes[]){
+		memcpy(data_ids , indexes, sizeof(indexes));
+	}
+	//~SampleData(){		} Destructor, not sure whether necessary
+	//int searchIndex(int num){	
+		//return search(data_ids,0,size_sample-1,num);
+	//}	
+};
+
+
+
+// Function to Search Element
+int search(int a[], int beg, int end, int item) {
+	int found=0;
+	if(beg==end)                                     // if Single Element is in the List 
+	{
+		if(item==a[beg])
+			found=1;
+		else
+			found=0;
+	}
+	else{
+		int mid = (beg + end)/2;
+		if(item == a[mid])
+			found=1;
+		else if(item < a[mid])
+			search(a,beg,mid-1,item);                 // Function Calls Itself (Recursion) 
+		else
+			search(a,mid+1,end,item);                 // Function Calls Itself (Recursion) 
+	}
+	
+}
+
 
 // Auxiliary method for quicksort ordering. Tailored to use the specified column of the dataset.
 int divide(string **array, int start, int end, int column) {
@@ -257,14 +297,14 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
 		left_leaf = new string*[left_size_y];
 		right_leaf = new string*[right_size_y];
 
-		for (int i = 0; i < left_size_y; i++) { // This is ugly
+		for (int i = 0; i < left_size_y; i++) { // use memcpy or std::copy
 			left_leaf[i] = new string[size_x];
 			for (int j = 0; j < size_x; j++) {
 				left_leaf[i][j] = left_leaf_vector[i][j];
 			}
 		}
 
-		for (int i = 0; i < right_size_y; i++) { // Yep, still ugly
+		for (int i = 0; i < right_size_y; i++) { // use memcpy or std::copy
 			right_leaf[i] = new string[size_x];
 			for (int j = 0; j < size_x; j++) {
 				right_leaf[i][j] = right_leaf_vector[i][j];
@@ -274,7 +314,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
 	else {
 		left_leaf = new string*[left_size_y];
 		right_leaf = new string*[right_size_y];
-		for (int i = 0; i < left_size_y; i++) { // Pretty sure the memory can be copied in chunks in order to divide the dataset. Don't know how.
+		for (int i = 0; i < left_size_y; i++) { // use std::copy or memcpy - optimization #1
 			left_leaf[i] = new string[size_x];
 			for (int j = 0; j < size_x; j++) {
 				left_leaf[i][j] = data_set[i][j];
@@ -449,6 +489,75 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
 	return success_ratio;
 }
 
+//Make sample function
+void makeSample(string** dataset, string** sampleset, int size, int attr, SampleData indices){
+	
+}
+
+//classify
+int classifyRF(string* data, TreeNode* classifier){	
+	TreeNode* current_node = classifier;
+	while (current_node->split_condition) {
+		int current_column = atoi(current_node->split_condition[1].c_str());
+		string current_value = data[current_column];
+		string split_value = current_node->split_condition[3];
+		if (attrs[current_column] == 1) {
+			if (atof(current_value.c_str()) <= atof(split_value.c_str()))
+				current_node = current_node->left;
+			else
+				current_node = current_node->right;
+		}
+		else {
+			if (split_value.compare(current_value) == 0)
+				current_node = current_node->left;
+			else
+				current_node = current_node->right;
+		}
+	}
+	
+	int winning_class = current_node->winning_class;
+	return winning_class;
+}	
+
+
+//Random Forest method
+void randomForest(string **dataset, int n){
+	typedef std::map<int, TreeNode*> Forest;
+	typedef std::pair<int, TreeNode*> RFTree;
+	typedef std::map<int, SampleData> ForestData;
+	typedef std::pair<int, SampleData> DataPair;
+
+	int num_samples=n;
+	Forest forest;
+	ForestData fdata;
+	string** temp_sample_set = new string*[(int)(size_y/3)];
+	std::random_device randomizer;
+	std::uniform_int_distribution<int> generator(0,size_y-1);
+	//building random forest phase
+	int	sample_size = size_y/3;
+	int attr_size = sqrt(size_x);
+	int index;
+	int temp_index_set[sample_size];
+	for(int i=0 ; i<num_samples ; i++){
+		for(int j=0 ; j<sample_size;j++){	
+			index = generator(randomizer);
+			temp_sample_set[j] = dataset[index];
+			//memcpy(temp_sample_set[j][0],dataset[index][0],sizeof(string)*size_x);
+			//std::copy(&dataset[index][0],&dataset[index][(size_x-1)],&temp_sample_set[j]);
+			temp_index_set[j]=index;			
+		}
+		TreeNode* test = new TreeNode();
+		SPRINT(temp_sample_set, sample_size, test, nullptr);
+		forest.insert(RFTree(i,test));
+		//SampleData samples = new SampleData(temp_index_set);
+		//fdata.insert(DataPair(i,samples));
+	}
+	//voting and efficiency calculation phase
+	/*std::cout<<classifyRF(dataset[1],forest[1])<<endl;
+	std::cout<<dataset[1][0]<<endl;*/
+}
+
+
 // There you go
 int main(int argc, char *argv[]) {
 
@@ -482,7 +591,10 @@ int main(int argc, char *argv[]) {
 
 	getline(configfs, line);
 	int k = atoi(line.c_str());
-
+	//read No. of samples
+	getline(configfs, line);
+	int num = atoi(line.c_str());
+	
 	int test_set_size = (int)((double)size_y / (double)k);
 
 	string **data_set = new string*[size_y];
@@ -531,4 +643,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
+	//Call function for building Random Forests
+	randomForest(data_set,num);
 }
