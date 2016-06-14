@@ -562,58 +562,115 @@ int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::
 }
 
 
-//Random Forest method
 void randomForest(string **dataset, int n){
-    typedef std::map<int, TreeNode*> Forest;
-    typedef std::pair<int, TreeNode*> RFTree;
-
-    int num_samples=n;
-    Forest forest;
-    string** temp_sample_set = new string*[(int)(2*size_y/3)];
-    int	sample_size = 2*size_y/3;
-    int attr_size = sqrt(size_x);
-    int tempIndex,tempVal;
-    int **index_set = new int*[n];
-    int **col_set = new int*[n];	
-    //building random forest phase
-    std::random_device randomizer;
-    std::uniform_int_distribution<int> generator_y(0,size_y-1);
-    std::uniform_int_distribution<int> generator_x(0,size_x-2);
-    int *arr = new int[size_x - 1];
-    for(int k=0 ; k<size_x -1;k++)
-        arr[k] = k;
-    //call make sample function inside loop
-    clock_t begin;
-    for(int i=0 ; i<num_samples ; i++){
-        begin = clock();
-        index_set[i] = new int[sample_size];
-        col_set[i] = new int[attr_size];
-        random_shuffle(&arr[0], &arr[size_x -2]);
-        for(int a=0 ; a<attr_size ; a++){
-            if(a==0)
-                col_set[i][a] = 0;
-            else
-                col_set[i][a] = arr[a-1];
-        }
-        for(int j=0 ; j<sample_size ; j++){	
-            tempIndex = generator_y(randomizer);
-            temp_sample_set[j] = new string[attr_size+1];
-            for(int k=0 ; k<attr_size ; k++){
-                temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
-            }			
-            index_set[i][j] = tempIndex;
-        }
-        TreeNode* test = new TreeNode();
-        SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
-        forest.insert(RFTree(i,test));
-        clock_t end = clock();
-        double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
-        cout<<"Time to build random forest number: "<< i << " -> " << rf_elapsed << "s" << endl;
-    }
-    //voting and efficiency calculation phase
-    std::cout<<classifyRF(dataset[1],forest[1])<<endl;
-    std::cout<<dataset[1][0]<<endl;	
+	typedef std::map<int, TreeNode*> Forest;
+	typedef std::pair<int, TreeNode*> RFTree;
+		
+	int num_samples=n;
+	Forest forest;
+	string** temp_sample_set = new string*[(int)(2*size_y/3)];
+	int	sample_size = (int)2*size_y/3;
+	int attr_size = (int)sqrt(size_x);
+	int tempIndex,tempVal;
+	int **index_set = new int*[n];
+	int **col_set = new int*[n];
+	int *has_element = new int[n];
+	//building random forest phase
+	std::random_device rd1,rd2;
+	std::uniform_int_distribution<int> generator_y(0,size_y-1);
+	//std::uniform_int_distribution<int> generator_x(0,size_x-2);
+	int maxVal = size_x-1;
+	int *arr;
+	arr = new int[maxVal];
+	for(int k=1 ; k<size_x;k++)
+		arr[k-1] = k;
+	//call make sample function inside loop
+	clock_t begin;
+	
+	for(int i=0 ; i<num_samples ; i++){
+		begin = clock();
+		index_set[i] = new int[sample_size];
+		col_set[i] = new int[attr_size];
+		/*while(maxVal!=1){
+			tempIndex = generator_x(rd1);
+			tempVal=arr[tempIndex];
+			arr[tempIndex] = arr[maxVal];
+			arr[maxVal] = tempVal;
+			maxVal--;
+		}*/
+		random_shuffle(&arr[0], &arr[maxVal- 1]);
+		for(int a = 0 ; a < attr_size+1 ; a++){
+			if(a == 0){
+				col_set[i][a] = a;
+			}else{
+				col_set[i][a] = arr[a];
+			}
+		}
+		for(int j=0 ; j<sample_size ; j++){	
+			tempIndex = generator_y(rd2);
+			temp_sample_set[j] = new string[(attr_size+1)];
+			for(int k=0 ; k < attr_size+1 ; k++){
+				temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
+			}			
+			index_set[i][j] = tempIndex;
+		}
+		TreeNode* test = new TreeNode();
+		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
+		forest.insert(RFTree(i,test));
+		if (sample_size>0) {
+			for (int t = 0; t < sample_size; t++) {
+				delete[] temp_sample_set[t];
+			}
+			//delete[] temp_sample_set;
+		}
+		clock_t end = clock();
+		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+		std::cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
+	}
+	
+	//voting and efficiency calculation phase
+	int** confusion_matrix = new int*[n_classes];
+	for (int i = 0; i < n_classes; i++) {
+		confusion_matrix[i] = new int[n_classes];
+		for (int j = 0; j < n_classes; j++) {
+			confusion_matrix[i][j] = 0;
+		}
+	}
+	clock_t begin1 = clock();
+	int voted_winner, actual_winner;
+	
+	for(int i=0;i<size_y;i++){
+		for(int j=0;j<n;j++){
+			if (search(index_set[i], 0 , (sample_size-1) , i))
+				has_element[j] = 1;
+			else
+				has_element[j] = 0;
+		}
+		voted_winner = voting(forest, dataset[i], has_element);
+		actual_winner = atoi(dataset[i][0].c_str());
+		confusion_matrix[actual_winner][voted_winner]++;
+	}
+	
+	int success = 0;
+	int error = 0;
+	for (int i = 0; i < n_classes; i++) {
+		for (int j = 0; j < n_classes; j++) {
+			if (i == j) success += confusion_matrix[i][j];
+			else error += confusion_matrix[i][j];
+		}
+	}
+	clock_t end1 = clock();
+	double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
+	
+	std::cout<<"Size of database :"<<size_y<<endl;
+	std::cout<<"Success :"<<success<<endl;
+	std::cout<<"Error :"<<error<<endl;
+	double success_ratio = (double)success / (double)size_y;
+	std::cout<<"Ratio of success :"<<success_ratio<<endl;
+	std::cout<<"Time taken to classify dataset :"<<voting_elapsed<<" seconds"<<endl;
+	
 }
+
 
 
 // There you go
