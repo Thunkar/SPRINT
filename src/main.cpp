@@ -27,7 +27,6 @@ struct TreeNode {
 
 // Function to Search Element
 int search(int a[], int beg, int end, int item) {
-
     if(beg==end)                                     // if Single Element is in the List 
     {
         if(item==a[beg])
@@ -566,14 +565,14 @@ int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::
 void randomForest(string **dataset, int n){
 	typedef std::map<int, TreeNode*> Forest;
 	typedef std::pair<int, TreeNode*> RFTree;
-		
+	map< int , vector< int>> indexMap;
+	vector<int> testvector;	
 	int num_samples=n;
 	Forest forest;
 	string** temp_sample_set = new string*[(int)(2*size_y/3)];
 	int	sample_size = (int)2*size_y/3;
 	int attr_size = (int)sqrt(size_x);
 	int tempIndex,tempVal;
-	int **index_set = new int*[n];
 	int **col_set = new int*[n];
 	int *has_element = new int[n];
 	//building random forest phase
@@ -590,7 +589,7 @@ void randomForest(string **dataset, int n){
 	
 	for(int i=0 ; i<num_samples ; i++){
 		begin = clock();
-		index_set[i] = new int[sample_size];
+		//index_set[i] = new int[sample_size];
 		col_set[i] = new int[attr_size];
 		random_shuffle(&arr[0], &arr[maxVal- 1]);
 		for(int a = 0 ; a < attr_size+1 ; a++){
@@ -606,16 +605,19 @@ void randomForest(string **dataset, int n){
 			for(int k=0 ; k < attr_size+1 ; k++){
 				temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
 			}			
-			index_set[i][j] = tempIndex;
+			testvector.push_back(tempIndex);
 		}
 		TreeNode* test = new TreeNode();
 		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
 		forest.insert(RFTree(i,test));
+		std::sort (testvector.begin(), testvector.end());
+		indexMap.insert(std::make_pair(i,testvector));
 		if (sample_size>0) {
 			for (int t = 0; t < sample_size; t++) {
 				delete[] temp_sample_set[t];
 			}
 		}
+		testvector.clear();
 		clock_t end = clock();
 		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
 		std::cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
@@ -633,11 +635,12 @@ void randomForest(string **dataset, int n){
 	int voted_winner, actual_winner;
 	
 	for(int i=0;i<size_y;i++){
-		for(int j=0;j<n;j++){
-			if (search(index_set[i], 0 , (sample_size-1) , i))
-				has_element[j] = 1;
-			else
-				has_element[j] = 0;
+		for(std::map<int, vector<int>>::iterator it = indexMap.begin();it!=indexMap.end();++it){
+			if(std::binary_search (it->second.begin(), it->second.end(), i)){
+				has_element[it->first]=1;
+			}else{
+				has_element[it->first] = 0;
+			}
 		}
 		voted_winner = voting(forest, dataset[i], has_element);
 		actual_winner = atoi(dataset[i][0].c_str());
@@ -671,7 +674,7 @@ int main(int argc, char *argv[]) {
     cout << "Reading configuration file" << endl;
 
     ifstream configfs;
-    configfs.open("config.cnf");
+    configfs.open("sprint.cnf");
     if (!configfs) {
         std::cout << "Failed to open the configuration file." << std::endl;
         return 1;
