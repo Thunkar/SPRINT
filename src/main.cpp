@@ -591,13 +591,6 @@ void randomForest(string **dataset, int n){
 		begin = clock();
 		index_set[i] = new int[sample_size];
 		col_set[i] = new int[attr_size];
-		/*while(maxVal!=1){
-			tempIndex = generator_x(rd1);
-			tempVal=arr[tempIndex];
-			arr[tempIndex] = arr[maxVal];
-			arr[maxVal] = tempVal;
-			maxVal--;
-		}*/
 		random_shuffle(&arr[0], &arr[maxVal- 1]);
 		for(int a = 0 ; a < attr_size+1 ; a++){
 			if(a == 0){
@@ -621,7 +614,6 @@ void randomForest(string **dataset, int n){
 			for (int t = 0; t < sample_size; t++) {
 				delete[] temp_sample_set[t];
 			}
-			//delete[] temp_sample_set;
 		}
 		clock_t end = clock();
 		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
@@ -668,7 +660,6 @@ void randomForest(string **dataset, int n){
 	double success_ratio = (double)success / (double)size_y;
 	std::cout<<"Ratio of success :"<<success_ratio<<endl;
 	std::cout<<"Time taken to classify dataset :"<<voting_elapsed<<" seconds"<<endl;
-	
 }
 
 
