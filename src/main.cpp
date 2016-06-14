@@ -27,18 +27,18 @@ struct TreeNode {
 
 // Function to Search Element
 int search(int a[], int beg, int end, int item) {
-	int found=0;
+	
 	if(beg==end)                                     // if Single Element is in the List 
 	{
 		if(item==a[beg])
-			found=1;
+			return 1;
 		else
-			found=0;
+			return 0;
 	}
 	else{
 		int mid = (beg + end)/2;
 		if(item == a[mid])
-			found=1;
+			return 1;
 		else if(item < a[mid])
 			search(a,beg,mid-1,item);                 // Function Calls Itself (Recursion) 
 		else
@@ -624,22 +624,7 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
 	return success_ratio;
 }
 
-/*//Make sample function
-void makeSample(string **dataset, string **sampleset, int size, int attr, int *col_set, int *index_set){
-	sampleset = new string*[size];
-	//lot to edit here just for template
-	for(int j=0 ; j<sample_size;j++){	
-			index = generator(randomizer);
-			temp_sample_set[j] = dataset[index];
-			//memcpy(temp_sample_set[j][0],dataset[index][0],sizeof(string)*size_x);
-			//std::copy(&dataset[index][0],&dataset[index][(size_x-1)],&temp_sample_set[j]);
-			temp_index_set[j]=index;			
-		}
-}*/
-
-
-
-//classify
+//Method takes one data object and runs the classification process on a single tree in the Random forest. Returns winning class.
 int classifyRF(string *data, TreeNode* classifier){	
 	TreeNode* current_node = classifier;
 	while (current_node->split_condition) {
@@ -664,6 +649,7 @@ int classifyRF(string *data, TreeNode* classifier){
 	return winning_class;
 }	
 
+//Method runs classifyRF on each tree in forest and returns the class which has majority.
 int voting(std::map<int,TreeNode*> &forest, string *data){
 	std::map<int,int> result;
 	int winner = -1, max = 0, temp=0;
@@ -680,7 +666,7 @@ int voting(std::map<int,TreeNode*> &forest, string *data){
 	return winner;
 }
 
-//To use on test set
+// To use on test set
 int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::map<int,int> &result, int num_trees){
 	int** confusion_matrix = new int*[n_classes];
 	for (int i = 0; i < n_classes; i++) {
