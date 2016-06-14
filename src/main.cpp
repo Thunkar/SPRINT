@@ -507,20 +507,21 @@ int classifyRF(string *data, TreeNode* classifier){
 }	
 
 //Method runs classifyRF on each tree in forest and returns the class which has majority.
-int voting(std::map<int,TreeNode*> &forest, string *data){
-    std::map<int,int> result;
-    int winner = -1, max = 0, temp=0;
-    for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
-        result[classifyRF(data,it->second)]++;
-    }
-    for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
-        temp = iter->second;
-        if(temp > max){
-            winner = iter->first;
-            max = temp;
-        }
-    }
-    return winner;
+int voting(std::map<int,TreeNode*> &forest, string *data, int *contains){
+	std::map<int,int> result;
+	int winner = -1, max = 0, temp=0;
+	for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
+		if(!contains[it->first])
+		result[classifyRF(data,it->second)]++;
+	}
+	for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
+		temp = iter->second;
+		if(temp > max){
+			winner = iter->first;
+			max = temp;
+		}
+	}
+	return winner;
 }
 
 // To use on test set
