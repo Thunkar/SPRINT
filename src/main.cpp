@@ -418,7 +418,7 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
     string **training_set;
     TreeNode *root;
     int *columns = new int[size_x];
-    
+
     for(int i = 0; i < size_x; i++){
         columns[i] = i;
     }
@@ -518,36 +518,36 @@ int classifyRF(string *data, TreeNode* classifier){
 
 //Method runs classifyRF on each tree in forest and returns the class which has majority.
 int voting(std::map<int,TreeNode*> &forest, string *data, int *contains){
-	std::map<int,int> result;
-	int winner = -1, max = 0, temp=0;
-	for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
-		if(!contains[it->first])
-		result[classifyRF(data,it->second)]++;
-	}
-	for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
-		temp = iter->second;
-		if(temp > max){
-			winner = iter->first;
-			max = temp;
-		}
-	}
-	return winner;
+    std::map<int,int> result;
+    int winner = -1, max = 0, temp=0;
+    for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
+        if(!contains[it->first])
+            result[classifyRF(data,it->second)]++;
+    }
+    for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
+        temp = iter->second;
+        if(temp > max){
+            winner = iter->first;
+            max = temp;
+        }
+    }
+    return winner;
 }
 
 int voting(std::map<int,TreeNode*> &forest, string *data){
-	std::map<int,int> result;
-	int winner = -1, max = 0, temp=0;
-	for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
-		result[classifyRF(data,it->second)]++;
-	}
-	for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
-		temp = iter->second;
-		if(temp > max){
-			winner = iter->first;
-			max = temp;
-		}
-	}
-	return winner;
+    std::map<int,int> result;
+    int winner = -1, max = 0, temp=0;
+    for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
+        result[classifyRF(data,it->second)]++;
+    }
+    for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
+        temp = iter->second;
+        if(temp > max){
+            winner = iter->first;
+            max = temp;
+        }
+    }
+    return winner;
 }
 
 // To use on test set
@@ -560,8 +560,8 @@ int** votingTest(std::map<int, TreeNode*> &forest, string **dataset, int size, i
         }
     }
     for (int i = 0; i < size; i++) {
-		int winning_class = voting(forest, dataset[i]);
-		int real_class = atoi(dataset[i][0].c_str());
+        int winning_class = voting(forest, dataset[i]);
+        int real_class = atoi(dataset[i][0].c_str());
         confusion_matrix[real_class][winning_class]++;
     }
     return confusion_matrix;
@@ -569,6 +569,7 @@ int** votingTest(std::map<int, TreeNode*> &forest, string **dataset, int size, i
 
 //Random Forest function
 void randomForest(string **dataset, int n){
+<<<<<<< HEAD
 	typedef std::map<int, TreeNode*> Forest;
 	typedef std::pair<int, TreeNode*> RFTree;
 	map< int , vector< int>> indexMap;
@@ -616,52 +617,120 @@ void randomForest(string **dataset, int n){
 		testvector.clear();
 		clock_t end = clock();
 		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+=======
+    typedef std::map<int, TreeNode*> Forest;
+    typedef std::pair<int, TreeNode*> RFTree;
+    map< int , vector< int>> indexMap;
+    vector<int> testvector;	
+    int num_samples=n;
+    Forest forest;
+    string** temp_sample_set = new string*[(int)(2*size_y/3)];
+    int	sample_size = (int)2*size_y/3;
+    int attr_size = (int)sqrt(size_x);
+    int tempIndex,tempVal;
+    int **col_set = new int*[n];
+    int *has_element = new int[n];
+    //building random forest phase
+    std::random_device rd;
+    std::uniform_int_distribution<int> generator_y(0,size_y-1);
+    int maxVal = size_x-1;
+    int *arr;
+    arr = new int[maxVal];
+    for(int k=1 ; k<size_x;k++)
+        arr[k-1] = k;
+    //make samples inside loop
+    clock_t begin;
+
+    for(int i=0 ; i<num_samples ; i++){
+        begin = clock();
+        //index_set[i] = new int[sample_size];
+        col_set[i] = new int[attr_size];
+        random_shuffle(&arr[0], &arr[maxVal- 1]);
+        for(int a = 0 ; a < attr_size+1 ; a++){
+            if(a == 0){
+                col_set[i][a] = a;
+            }else{
+                col_set[i][a] = arr[a];
+            }
+        }
+        for(int j=0 ; j<sample_size ; j++){	
+            tempIndex = generator_y(rd);
+            temp_sample_set[j] = new string[(attr_size+1)];
+            for(int k=0 ; k < attr_size+1 ; k++){
+                temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
+            }			
+            testvector.push_back(tempIndex);
+        }
+        TreeNode* test = new TreeNode();
+        resetCurrentTreeStats();
+        SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
+        forest.insert(RFTree(i,test));
+        std::sort (testvector.begin(), testvector.end());
+        indexMap.insert(std::make_pair(i,testvector));
+        if (sample_size>0) {
+            for (int t = 0; t < sample_size; t++) {
+                delete[] temp_sample_set[t];
+            }
+        }
+        testvector.clear();
+        clock_t end = clock();
+        double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+>>>>>>> 01b5b89f01cbda5fd277a3c3153b55681ec77e78
         cout << "============" << endl;
-		cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
+        cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
         cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
-	}
-	
-	//voting and efficiency calculation phase
-	int** confusion_matrix = new int*[n_classes];
-	for (int i = 0; i < n_classes; i++) {
-		confusion_matrix[i] = new int[n_classes];
-		for (int j = 0; j < n_classes; j++) {
-			confusion_matrix[i][j] = 0;
-		}
-	}
-	clock_t begin1 = clock();
-	int voted_winner, actual_winner;
-	
-	for(int i=0;i<size_y;i++){
-		for(std::map<int, vector<int>>::iterator it = indexMap.begin();it!=indexMap.end();++it){
-			if(std::binary_search (it->second.begin(), it->second.end(), i)){
-				has_element[it->first]=1;
-			}else{
-				has_element[it->first] = 0;
-			}
-		}
-		voted_winner = voting(forest, dataset[i], has_element);
-		actual_winner = atoi(dataset[i][0].c_str());
-		confusion_matrix[actual_winner][voted_winner]++;
-	}
-	
-	int success = 0;
-	int error = 0;
-	for (int i = 0; i < n_classes; i++) {
-		for (int j = 0; j < n_classes; j++) {
-			if (i == j) success += confusion_matrix[i][j];
-			else error += confusion_matrix[i][j];
-		}
-	}
-	clock_t end1 = clock();
-	double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
+    }
+
+    //voting and efficiency calculation phase
+    int** confusion_matrix = new int*[n_classes];
+    for (int i = 0; i < n_classes; i++) {
+        confusion_matrix[i] = new int[n_classes];
+        for (int j = 0; j < n_classes; j++) {
+            confusion_matrix[i][j] = 0;
+        }
+    }
+    clock_t begin1 = clock();
+    int voted_winner, actual_winner;
+
+    for(int i=0;i<size_y;i++){
+        for(std::map<int, vector<int>>::iterator it = indexMap.begin();it!=indexMap.end();++it){
+            if(std::binary_search (it->second.begin(), it->second.end(), i)){
+                has_element[it->first]=1;
+            }else{
+                has_element[it->first] = 0;
+            }
+        }
+        voted_winner = voting(forest, dataset[i], has_element);
+        actual_winner = atoi(dataset[i][0].c_str());
+        confusion_matrix[actual_winner][voted_winner]++;
+    }
+
+    int success = 0;
+    int error = 0;
+    for (int i = 0; i < n_classes; i++) {
+        for (int j = 0; j < n_classes; j++) {
+            if (i == j) success += confusion_matrix[i][j];
+            else error += confusion_matrix[i][j];
+        }
+    }
+    clock_t end1 = clock();
+    double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
     cout << "=========" << endl;	
+<<<<<<< HEAD
 	cout<<"Size of database :"<<size_y<<endl;
 	cout<<"Success :"<<success<<endl;
 	cout<<"Error :"<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
 	cout<<"Ratio of success :"<<success_ratio<<endl;
 	cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
+=======
+    cout<<"Size of database: "<<size_y<<endl;
+    cout<<"Success: "<<success<<endl;
+    cout<<"Error: "<<error<<endl;
+    double success_ratio = (double)success / (double)size_y;
+    cout<<"Ratio of success: "<<success_ratio<<endl;
+    cout<<"Time taken to classify dataset: "<<voting_elapsed<<"s"<<endl;
+>>>>>>> 01b5b89f01cbda5fd277a3c3153b55681ec77e78
 }
 
 
@@ -731,30 +800,35 @@ int main(int argc, char *argv[]) {
     }
     if(type.compare("sprint") == 0) {
 
-            random_shuffle(&indexes[0], &indexes[size_y - 1]);
+        random_shuffle(&indexes[0], &indexes[size_y - 1]);
 
-            int **k_matrix = new int*[k];
+        int **k_matrix = new int*[k];
 
-            for (int i = 0; i < k; i++) {
+        for (int i = 0; i < k; i++) {
             k_matrix[i] = new int[test_set_size];
             for (int j = 0; j < test_set_size; j++) {
-            k_matrix[i][j] = indexes[i*test_set_size + j];
+                k_matrix[i][j] = indexes[i*test_set_size + j];
             }
-            }
+        }
 
-            int test_set_index = 0;
-            double acc_success_ratio = 0;
+        int test_set_index = 0;
+        double acc_success_ratio = 0;
 
-            cout << "Building classifiers..." << endl;
-
-            for (int i = 0; i < k; i++) {
+        cout << "Building classifiers..." << endl;
+        clock_t begin = clock();
+        for (int i = 0; i < k; i++) {
             acc_success_ratio += kFoldCrossValidation(data_set, k, k_matrix, test_set_index++, test_set_size);
-            }
-
-            cout << "===========" << endl;
-            cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
+        }
+        clock_t end = clock();
+        double total_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+        cout << "===========" << endl;
+        cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
+        cout << "Total elapsed time: " << total_elapsed << "s" << endl;
     } else {
-
+        clock_t begin = clock();
         randomForest(data_set,num);
+        clock_t end = clock();
+        double total_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+        cout << "Total elapsed time: " << total_elapsed << "s" << endl;
     }
 }
