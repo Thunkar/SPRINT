@@ -168,10 +168,10 @@ string* bestGiniSplit(string **data_set, int size_y, int col_size, int *col_set)
                 //column = j;
                 column = col_set[j]; 
                 row_split = i;
-                if (attrs[j] == 1 && i < size_y - 1)
-                    value = to_string((atof(data_set[i][j].c_str()) + atof(data_set[i + 1][j].c_str())) / 2);
+                if (attrs[col_set[j]] == 1 && i < size_y - 1)
+                    value = to_string((atof(data_set[i][col_set[j]].c_str()) + atof(data_set[i + 1][col_set[j]].c_str())) / 2);
                 else
-                    value = data_set[i][j];
+                    value = data_set[i][col_set[j]];
             }
         }
     }
@@ -656,12 +656,12 @@ void randomForest(string **dataset, int n){
 	clock_t end1 = clock();
 	double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
     cout << "=========" << endl;	
-	cout<<"Size of database: "<<size_y<<endl;
-	cout<<"Success: "<<success<<endl;
-	cout<<"Error: "<<error<<endl;
+	cout<<"Size of database :"<<size_y<<endl;
+	cout<<"Success :"<<success<<endl;
+	cout<<"Error :"<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
-	cout<<"Ratio of success: "<<success_ratio<<endl;
-	cout<<"Time taken to classify dataset: "<<voting_elapsed<<"s"<<endl;
+	cout<<"Ratio of success :"<<success_ratio<<endl;
+	cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
 }
 
 
