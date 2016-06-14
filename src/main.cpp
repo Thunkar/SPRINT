@@ -656,12 +656,12 @@ void randomForest(string **dataset, int n){
 	clock_t end1 = clock();
 	double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
     cout << "=========" << endl;	
-	cout<<"Size of database :"<<size_y<<endl;
-	cout<<"Success :"<<success<<endl;
-	cout<<"Error :"<<error<<endl;
+	cout<<"Size of database: "<<size_y<<endl;
+	cout<<"Success: "<<success<<endl;
+	cout<<"Error: "<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
-	cout<<"Ratio of success :"<<success_ratio<<endl;
-	cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
+	cout<<"Ratio of success: "<<success_ratio<<endl;
+	cout<<"Time taken to classify dataset: "<<voting_elapsed<<"s"<<endl;
 }
 
 
