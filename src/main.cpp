@@ -40,18 +40,18 @@ struct SampleData {
 
 // Function to Search Element
 int search(int a[], int beg, int end, int item) {
-	int found=0;
+	//int found=0;
 	if(beg==end)                                     // if Single Element is in the List 
 	{
 		if(item==a[beg])
-			found=1;
+			return 1;//		found=1;
 		else
-			found=0;
+			return 0;//		found=0;
 	}
 	else{
 		int mid = (beg + end)/2;
 		if(item == a[mid])
-			found=1;
+			return 1;//		found=1;
 		else if(item < a[mid])
 			search(a,beg,mid-1,item);                 // Function Calls Itself (Recursion) 
 		else
