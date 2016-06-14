@@ -209,6 +209,47 @@ string* bestGiniSplit(string ** data_set, int size_y) {
 		return nullptr;
 }
 
+//for Random forest may not be necessary to have col_set
+string* bestGiniSplit(string ** data_set, int size_y, int col_size, int *col_set){
+	double best_gini = 2;
+	int row_split, column;
+	int numCol=col_size;
+	string value;
+	double majority_class = -1;
+    set<string> nominal_already_checked;
+	for (int j = 1; j < numCol; j++) {
+		if (attrs[j] == 1) quicksort(data_set, 0, size_y - 1, j);
+		for (int i = 0; i < size_y; i++) {
+            if(attrs[j] == 0){
+                if(nominal_already_checked.find(data_set[i][j]) != nominal_already_checked.end())
+                    continue;
+                else 
+                    nominal_already_checked.insert(data_set[i][j]);
+            }
+			double current_gini = gini(data_set, size_y, i, j);
+			if (current_gini < best_gini) {
+				best_gini = current_gini;
+				column = j; 
+				row_split = i;
+				if (attrs[j] == 1 && i < size_y - 1)
+					value = to_string((atof(data_set[i][j].c_str()) + atof(data_set[i + 1][j].c_str())) / 2);
+				else
+					value = data_set[i][j];
+			}
+		}
+	}
+	if (best_gini < 2) {
+		string *str = new string[5];
+		str[0] = to_string(row_split);
+		str[1] = to_string(column);
+		str[2] = to_string(best_gini);
+		str[3] = value;
+		str[4] = to_string(col_set[column]); //value which stores real column id
+		return str;
+	}
+	else
+		return nullptr;
+}
 // Utility method to print classifier trees. Only suitable for small ones (demonstration purpuses).
 void printTree(TreeNode* p, int indent) {
 	if (p) {
@@ -367,6 +408,113 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
 	delete[] left_leaf;
 }
 
+//For Random Forest
+void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent, int col_size, int *col_set){
+	string *best_split = bestGiniSplit(data_set, size_y, col_size, col_set); // Call Random Forest version
+	if (!best_split) {
+		insertTerminalNode(data_set, size_y, parent); 
+		return;
+	}
+
+	int row_split = atoi(best_split[0].c_str());
+	int column = atoi(best_split[1].c_str());
+	double gini = atof(best_split[2].c_str());
+	int real_column = atoi(best_split[4].c_str());//add statement for real column id
+	
+	int left_size_y = row_split + 1;
+	int right_size_y = size_y - row_split - 1;
+
+	string **left_leaf;
+	string **right_leaf;
+
+	if (attrs[real_column] == 0) { // If nominal attribute, use vectors to store the leaves temporarily (we don't know their size).
+		vector<string*> left_leaf_vector;
+		vector<string*> right_leaf_vector;
+		for (int i = 0; i < size_y; i++) {
+			if (data_set[row_split][column].compare(data_set[i][column]) == 0) {
+				left_leaf_vector.push_back(data_set[i]);
+			}
+			else {
+				right_leaf_vector.push_back(data_set[i]);
+			}
+		}
+
+		left_size_y = left_leaf_vector.size();
+		right_size_y = right_leaf_vector.size();
+
+		left_leaf = new string*[left_size_y];
+		right_leaf = new string*[right_size_y];
+
+		for (int i = 0; i < left_size_y; i++) { // use memcpy or std::copy
+			left_leaf[i] = new string[size_x];
+			for (int j = 0; j < col_size; j++) {
+				left_leaf[i][j] = left_leaf_vector[i][j];
+			}
+		}
+
+		for (int i = 0; i < right_size_y; i++) { // use memcpy or std::copy
+			right_leaf[i] = new string[size_x];
+			for (int j = 0; j < col_size; j++) {
+				right_leaf[i][j] = right_leaf_vector[i][j];
+			}
+		}
+	}
+	else {
+		left_leaf = new string*[left_size_y];
+		right_leaf = new string*[right_size_y];
+		for (int i = 0; i < left_size_y; i++) { // use std::copy or memcpy - optimization #1
+			left_leaf[i] = new string[size_x];
+			for (int j = 0; j < col_size; j++) {
+				left_leaf[i][j] = data_set[i][j];
+			}
+		}
+
+		for (int i = 0; i < right_size_y; i++) {
+			right_leaf[i] = new string[size_x];
+			for (int j = 0; j < col_size; j++) {
+				right_leaf[i][j] = data_set[i + left_size_y][j];
+			}
+		}
+	}
+
+	if (right_size_y > 0) {
+		TreeNode* node = new TreeNode();
+		node->split_condition = best_split;
+		node->winning_class = -1;
+		node->left = nullptr;
+		node->right = nullptr;
+		if (parent) {
+			if (parent->left)
+				parent->right = node;
+			else
+				parent->left = node;
+		}
+		else {
+			root = node;
+		}
+		if (gini >= gini_threshold) {
+			SPRINT(left_leaf, left_size_y, root, node); //call rf version
+			SPRINT(right_leaf, right_size_y, root, node); //call rf version
+		}
+		else {
+			insertTerminalNode(left_leaf, left_size_y, node); 
+			insertTerminalNode(right_leaf, right_size_y, node); 
+		}
+	}
+	else {
+		insertTerminalNode(left_leaf, left_size_y, parent); 
+	}
+	for (int i = 0; i < right_size_y; i++) {
+		delete[] right_leaf[i];
+	}
+	delete[] right_leaf;
+
+	for (int i = 0; i < left_size_y; i++) {
+		delete[] left_leaf[i];
+	}
+	delete[] left_leaf;
+}
+
 // Takes a test set and transverses the tree for each sample, in order to build the confusion matrix of the classifier.
 int** classify(string **data_set, int size_y, TreeNode* classifier) {
 	int** confusion_matrix = new int*[n_classes];
@@ -498,7 +646,7 @@ void makeSample(string** dataset, string** sampleset, int size, int attr, Sample
 int classifyRF(string* data, TreeNode* classifier){	
 	TreeNode* current_node = classifier;
 	while (current_node->split_condition) {
-		int current_column = atoi(current_node->split_condition[1].c_str());
+		int current_column = atoi(current_node->split_condition[4].c_str());
 		string current_value = data[current_column];
 		string split_value = current_node->split_condition[3];
 		if (attrs[current_column] == 1) {
@@ -555,6 +703,8 @@ void randomForest(string **dataset, int n){
 	//voting and efficiency calculation phase
 	/*std::cout<<classifyRF(dataset[1],forest[1])<<endl;
 	std::cout<<dataset[1][0]<<endl;*/
+	
+	
 }
 
 
@@ -636,13 +786,13 @@ int main(int argc, char *argv[]) {
 	int test_set_index = 0;
 	double acc_success_ratio = 0;
 
-	cout << "Building classifiers..." << endl;
+	//cout << "Building classifiers..." << endl;
 
-	for (int i = 0; i < k; i++) {
-		acc_success_ratio += kFoldCrossValidation(data_set, k, k_matrix, test_set_index++, test_set_size);
-	}
+	//for (int i = 0; i < k; i++) {
+		//acc_success_ratio += kFoldCrossValidation(data_set, k, k_matrix, test_set_index++, test_set_size);
+	//}
 
-	cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
+	//cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
 	//Call function for building Random Forests
 	randomForest(data_set,num);
 }
