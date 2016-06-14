@@ -569,7 +569,6 @@ int** votingTest(std::map<int, TreeNode*> &forest, string **dataset, int size, i
 
 //Random Forest function
 void randomForest(string **dataset, int n){
-<<<<<<< HEAD
 	typedef std::map<int, TreeNode*> Forest;
 	typedef std::pair<int, TreeNode*> RFTree;
 	map< int , vector< int>> indexMap;
@@ -617,65 +616,6 @@ void randomForest(string **dataset, int n){
 		testvector.clear();
 		clock_t end = clock();
 		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
-=======
-    typedef std::map<int, TreeNode*> Forest;
-    typedef std::pair<int, TreeNode*> RFTree;
-    map< int , vector< int>> indexMap;
-    vector<int> testvector;	
-    int num_samples=n;
-    Forest forest;
-    string** temp_sample_set = new string*[(int)(2*size_y/3)];
-    int	sample_size = (int)2*size_y/3;
-    int attr_size = (int)sqrt(size_x);
-    int tempIndex,tempVal;
-    int **col_set = new int*[n];
-    int *has_element = new int[n];
-    //building random forest phase
-    std::random_device rd;
-    std::uniform_int_distribution<int> generator_y(0,size_y-1);
-    int maxVal = size_x-1;
-    int *arr;
-    arr = new int[maxVal];
-    for(int k=1 ; k<size_x;k++)
-        arr[k-1] = k;
-    //make samples inside loop
-    clock_t begin;
-
-    for(int i=0 ; i<num_samples ; i++){
-        begin = clock();
-        //index_set[i] = new int[sample_size];
-        col_set[i] = new int[attr_size];
-        random_shuffle(&arr[0], &arr[maxVal- 1]);
-        for(int a = 0 ; a < attr_size+1 ; a++){
-            if(a == 0){
-                col_set[i][a] = a;
-            }else{
-                col_set[i][a] = arr[a];
-            }
-        }
-        for(int j=0 ; j<sample_size ; j++){	
-            tempIndex = generator_y(rd);
-            temp_sample_set[j] = new string[(attr_size+1)];
-            for(int k=0 ; k < attr_size+1 ; k++){
-                temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
-            }			
-            testvector.push_back(tempIndex);
-        }
-        TreeNode* test = new TreeNode();
-        resetCurrentTreeStats();
-        SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
-        forest.insert(RFTree(i,test));
-        std::sort (testvector.begin(), testvector.end());
-        indexMap.insert(std::make_pair(i,testvector));
-        if (sample_size>0) {
-            for (int t = 0; t < sample_size; t++) {
-                delete[] temp_sample_set[t];
-            }
-        }
-        testvector.clear();
-        clock_t end = clock();
-        double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
->>>>>>> 01b5b89f01cbda5fd277a3c3153b55681ec77e78
         cout << "============" << endl;
         cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
         cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
@@ -716,21 +656,12 @@ void randomForest(string **dataset, int n){
     clock_t end1 = clock();
     double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
     cout << "=========" << endl;	
-<<<<<<< HEAD
 	cout<<"Size of database :"<<size_y<<endl;
 	cout<<"Success :"<<success<<endl;
 	cout<<"Error :"<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
 	cout<<"Ratio of success :"<<success_ratio<<endl;
 	cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
-=======
-    cout<<"Size of database: "<<size_y<<endl;
-    cout<<"Success: "<<success<<endl;
-    cout<<"Error: "<<error<<endl;
-    double success_ratio = (double)success / (double)size_y;
-    cout<<"Ratio of success: "<<success_ratio<<endl;
-    cout<<"Time taken to classify dataset: "<<voting_elapsed<<"s"<<endl;
->>>>>>> 01b5b89f01cbda5fd277a3c3153b55681ec77e78
 }
 
 
