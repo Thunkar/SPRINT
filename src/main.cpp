@@ -500,8 +500,24 @@ int voting(std::map<int,TreeNode*> &forest, string *data, int *contains){
 	return winner;
 }
 
+int voting(std::map<int,TreeNode*> &forest, string *data){
+	std::map<int,int> result;
+	int winner = -1, max = 0, temp=0;
+	for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
+		result[classifyRF(data,it->second)]++;
+	}
+	for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
+		temp = iter->second;
+		if(temp > max){
+			winner = iter->first;
+			max = temp;
+		}
+	}
+	return winner;
+}
+
 // To use on test set
-int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::map<int,int> &result, int num_trees){
+int** votingTest(std::map<int, TreeNode*> &forest, string **dataset, int size, int attr_size){
     int** confusion_matrix = new int*[n_classes];
     for (int i = 0; i < n_classes; i++) {
         confusion_matrix[i] = new int[n_classes];
@@ -510,35 +526,14 @@ int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::
         }
     }
     for (int i = 0; i < size; i++) {
-        for(int j=0; j<num_trees ; j++){
-            TreeNode* current_node = forest[j];
-            while (current_node->split_condition) {
-                int current_column = atoi(current_node->split_condition[4].c_str());
-                string current_value = dataset[i][current_column];
-                string split_value = current_node->split_condition[3];
-                if (attrs[current_column] == 1) {
-                    if (atof(current_value.c_str()) <= atof(split_value.c_str()))
-                        current_node = current_node->left;
-                    else
-                        current_node = current_node->right;
-
-                }
-                else {
-                    if (split_value.compare(current_value) == 0)
-                        current_node = current_node->left;
-                    else
-                        current_node = current_node->right;
-                }
-            }
-            int real_class = atoi(dataset[i][0].c_str());
-            int winning_class = current_node->winning_class;
-            confusion_matrix[real_class][winning_class]++;
-        }
+		int winning_class = voting(forest, dataset[i]);
+		int real_class = atoi(dataset[i][0].c_str());
+        confusion_matrix[real_class][winning_class]++;
     }
     return confusion_matrix;
 }
 
-
+//Random Forest function
 void randomForest(string **dataset, int n){
 	typedef std::map<int, TreeNode*> Forest;
 	typedef std::pair<int, TreeNode*> RFTree;
@@ -553,15 +548,14 @@ void randomForest(string **dataset, int n){
 	int **col_set = new int*[n];
 	int *has_element = new int[n];
 	//building random forest phase
-	std::random_device rd1,rd2;
+	std::random_device rd;
 	std::uniform_int_distribution<int> generator_y(0,size_y-1);
-	//std::uniform_int_distribution<int> generator_x(0,size_x-2);
 	int maxVal = size_x-1;
 	int *arr;
 	arr = new int[maxVal];
 	for(int k=1 ; k<size_x;k++)
 		arr[k-1] = k;
-	//call make sample function inside loop
+	//make samples inside loop
 	clock_t begin;
 	
 	for(int i=0 ; i<num_samples ; i++){
@@ -577,7 +571,7 @@ void randomForest(string **dataset, int n){
 			}
 		}
 		for(int j=0 ; j<sample_size ; j++){	
-			tempIndex = generator_y(rd2);
+			tempIndex = generator_y(rd);
 			temp_sample_set[j] = new string[(attr_size+1)];
 			for(int k=0 ; k < attr_size+1 ; k++){
 				temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
@@ -640,7 +634,7 @@ void randomForest(string **dataset, int n){
 	std::cout<<"Error :"<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
 	std::cout<<"Ratio of success :"<<success_ratio<<endl;
-	std::cout<<"Time taken to classify dataset :"<<voting_elapsed<<" seconds"<<endl;
+	std::cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
 }
 
 
