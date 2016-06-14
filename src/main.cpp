@@ -149,19 +149,24 @@ string* bestGiniSplit(string **data_set, int size_y, int col_size, int *col_set)
     string value;
     double majority_class = -1;
     set<string> nominal_already_checked;
+    if(col_size < size_x){
+		random_shuffle(&col_set[0], &col_set[size_x-1]);
+	}
+	//replace j with col_set[j] it is the same when using generic SPRINT but it changes if using Random Forest
     for (int j = 1; j < col_size; j++) {
-        if (attrs[j] == 1) quicksort(data_set, 0, size_y - 1, j);
+        if (attrs[col_set[j]] == 1) quicksort(data_set, 0, size_y - 1, col_set[j]);
         for (int i = 0; i < size_y; i++) {
-            if(attrs[j] == 0){
+            if(attrs[col_set[j]] == 0){
                 if(nominal_already_checked.find(data_set[i][j]) != nominal_already_checked.end())
                     continue;
                 else 
                     nominal_already_checked.insert(data_set[i][j]);
             }
-            double current_gini = gini(data_set, size_y, i, j);
+            double current_gini = gini(data_set, size_y, i, col_set[j]);
             if (current_gini < best_gini) {
                 best_gini = current_gini;
-                column = j; 
+                //column = j;
+                column = col_set[j]; 
                 row_split = i;
                 if (attrs[j] == 1 && i < size_y - 1)
                     value = to_string((atof(data_set[i][j].c_str()) + atof(data_set[i + 1][j].c_str())) / 2);
@@ -176,7 +181,8 @@ string* bestGiniSplit(string **data_set, int size_y, int col_size, int *col_set)
         str[1] = to_string(column);
         str[2] = to_string(best_gini);
         str[3] = value;
-        str[4] = to_string(col_set[column]); //value which stores real column id
+        //str[4] = to_string(col_set[column]); //value which stores real column id
+        str[4] = to_string(column); //value which stores real column id - Probably unecessary now
         return str;
     }
     else
@@ -571,9 +577,8 @@ void randomForest(string **dataset, int n){
 	Forest forest;
 	string** temp_sample_set = new string*[(int)(2*size_y/3)];
 	int	sample_size = (int)2*size_y/3;
-	int attr_size = (int)sqrt(size_x);
+	int attr_size = (int)(sqrt(size_x));
 	int tempIndex,tempVal;
-	int **col_set = new int*[n];
 	int *has_element = new int[n];
 	//building random forest phase
 	std::random_device rd;
@@ -588,27 +593,18 @@ void randomForest(string **dataset, int n){
 	
 	for(int i=0 ; i<num_samples ; i++){
 		begin = clock();
-		//index_set[i] = new int[sample_size];
-		col_set[i] = new int[attr_size];
-		random_shuffle(&arr[0], &arr[maxVal- 1]);
-		for(int a = 0 ; a < attr_size+1 ; a++){
-			if(a == 0){
-				col_set[i][a] = a;
-			}else{
-				col_set[i][a] = arr[a];
-			}
-		}
+		random_shuffle(&arr[0], &arr[maxVal]);
 		for(int j=0 ; j<sample_size ; j++){	
 			tempIndex = generator_y(rd);
-			temp_sample_set[j] = new string[(attr_size+1)];
-			for(int k=0 ; k < attr_size+1 ; k++){
-				temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
-			}			
+			temp_sample_set[j] = new string[size_x];
+			for(int k=0 ; k < size_x ; k++){
+				temp_sample_set[j][k] = dataset[tempIndex][k];
+			}
 			testvector.push_back(tempIndex);
 		}
 		TreeNode* test = new TreeNode();
         resetCurrentTreeStats();
-		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
+		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), arr);
 		forest.insert(RFTree(i,test));
 		std::sort (testvector.begin(), testvector.end());
 		indexMap.insert(std::make_pair(i,testvector));
@@ -676,7 +672,7 @@ int main(int argc, char *argv[]) {
     cout << "Reading configuration file" << endl;
 
     ifstream configfs;
-    configfs.open("config.cnf");
+    configfs.open("sprint.cnf");
     if (!configfs) {
         std::cout << "Failed to open the configuration file." << std::endl;
         return 1;
