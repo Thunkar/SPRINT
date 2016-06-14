@@ -24,29 +24,6 @@ struct TreeNode {
     TreeNode *right;
 };
 
-
-// Function to Search Element
-int search(int a[], int beg, int end, int item) {
-    if(beg==end)                                     // if Single Element is in the List 
-    {
-        if(item==a[beg])
-            return 1;
-        else
-            return 0;
-    }
-    else{
-        int mid = (beg + end)/2;
-        if(item == a[mid])
-            return 1;
-        else if(item < a[mid])
-            search(a,beg,mid-1,item);                 // Function Calls Itself (Recursion) 
-        else
-            search(a,mid+1,end,item);                 // Function Calls Itself (Recursion) 
-    }
-
-}
-
-
 // Auxiliary method for quicksort ordering. Tailored to use the specified column of the dataset.
 int divide(string **array, int start, int end, int column) {
     int left;
