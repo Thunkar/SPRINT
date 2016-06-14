@@ -24,6 +24,15 @@ struct TreeNode {
     TreeNode *right;
 };
 
+struct TreeStats {
+    int node_count;
+    int leaf_count;
+    int gini_count;
+    int sprint_count;
+};
+
+TreeStats *current_tree_stats;
+
 // Auxiliary method for quicksort ordering. Tailored to use the specified column of the dataset.
 int divide(string **array, int start, int end, int column) {
     int left;
@@ -74,6 +83,7 @@ void quicksort(string **array, int start, int end, int column)
 
 // Calculates the gini measure of dissimilarity after splitting the dataset at the specified split_row, in relation to the attribute in column. Uses attrs to determine if column attribute is numerical or nominal.
 double gini(string **data_set, int size_y, int split_row, int column) {
+    current_tree_stats->gini_count++;
     double **gini_matrix = new double*[2];
     for (int i = 0; i < 2; i++) {
         gini_matrix[i] = new double[n_classes];
@@ -196,6 +206,7 @@ void printTree(TreeNode* p, int indent) {
 // Inserts a terminal node with the decision class at the bottom of the tree.
 void insertTerminalNode(string **data_set, int size_y, TreeNode* parent) {
     if (size_y == 0) return;
+    current_tree_stats->leaf_count++;
     int *class_rank = new int[n_classes];
     for (int i = 0; i < n_classes; i++) {
         class_rank[i] = 0;
@@ -225,6 +236,7 @@ void insertTerminalNode(string **data_set, int size_y, TreeNode* parent) {
 
 // Main recursive algorithm.
 void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent, int col_size, int* col_set){
+    current_tree_stats->sprint_count++;
     string *best_split = bestGiniSplit(data_set, size_y, col_size, col_set); 
     if (!best_split) {
         insertTerminalNode(data_set, size_y, parent); 
@@ -307,6 +319,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent, in
         else {
             root = node;
         }
+        current_tree_stats->node_count++;
         if (gini >= gini_threshold) {
             SPRINT(left_leaf, left_size_y, root, node, col_size, col_set);
             SPRINT(right_leaf, right_size_y, root, node, col_size, col_set);
@@ -380,7 +393,20 @@ void deleteTree(TreeNode *root) {
     delete root;
 }
 
+void resetCurrentTreeStats() {
+
+    if(current_tree_stats)
+        delete current_tree_stats;
+    current_tree_stats = new TreeStats();
+    current_tree_stats->node_count = 0;
+    current_tree_stats->leaf_count = 0;
+    current_tree_stats->gini_count = 0;
+    current_tree_stats->sprint_count = 0;
+
+}
+
 double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_set_index, int test_set_size) {
+    resetCurrentTreeStats();
     int training_set_size = (k - 1)*test_set_size;
     string **test_set = new string*[test_set_size];
     string **training_set;
@@ -452,8 +478,10 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
     delete[] confusion_matrix;
     deleteTree(root);
     double success_ratio = (double)success / (double)test_set_size;
+    cout << "======" << endl;
     cout << "Success ratio of partition: " << test_set_index << " -> " << success_ratio << endl;
     cout << "Time to build the classifier: " << sprint_elapsed << "s. Time to classify the test data: " << classify_elapsed << "s." << endl;
+    cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
     return success_ratio;
 }
 
@@ -579,6 +607,7 @@ void randomForest(string **dataset, int n){
 			testvector.push_back(tempIndex);
 		}
 		TreeNode* test = new TreeNode();
+        resetCurrentTreeStats();
 		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
 		forest.insert(RFTree(i,test));
 		std::sort (testvector.begin(), testvector.end());
@@ -591,7 +620,9 @@ void randomForest(string **dataset, int n){
 		testvector.clear();
 		clock_t end = clock();
 		double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
-		std::cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
+        cout << "============" << endl;
+		cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
+        cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
 	}
 	
 	//voting and efficiency calculation phase
@@ -628,13 +659,13 @@ void randomForest(string **dataset, int n){
 	}
 	clock_t end1 = clock();
 	double voting_elapsed = double(end1 - begin1) / CLOCKS_PER_SEC;
-	
-	std::cout<<"Size of database :"<<size_y<<endl;
-	std::cout<<"Success :"<<success<<endl;
-	std::cout<<"Error :"<<error<<endl;
+    cout << "=========" << endl;	
+	cout<<"Size of database :"<<size_y<<endl;
+	cout<<"Success :"<<success<<endl;
+	cout<<"Error :"<<error<<endl;
 	double success_ratio = (double)success / (double)size_y;
-	std::cout<<"Ratio of success :"<<success_ratio<<endl;
-	std::cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
+	cout<<"Ratio of success :"<<success_ratio<<endl;
+	cout<<"Time taken to classify dataset :"<<voting_elapsed<<"s"<<endl;
 }
 
 
@@ -645,7 +676,7 @@ int main(int argc, char *argv[]) {
     cout << "Reading configuration file" << endl;
 
     ifstream configfs;
-    configfs.open("sprint.cnf");
+    configfs.open("config.cnf");
     if (!configfs) {
         std::cout << "Failed to open the configuration file." << std::endl;
         return 1;
@@ -724,6 +755,7 @@ int main(int argc, char *argv[]) {
             acc_success_ratio += kFoldCrossValidation(data_set, k, k_matrix, test_set_index++, test_set_size);
             }
 
+            cout << "===========" << endl;
             cout << "Total success ratio after cross-validation: " << acc_success_ratio / (double)k << endl;
     } else {
 
