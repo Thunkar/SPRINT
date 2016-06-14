@@ -742,6 +742,8 @@ void randomForest(string **dataset, int n){
 	for(int k=1 ; k<=maxVal;k++)
 		arr[k-1] = k;
 	//call make sample function inside loop
+	clock_t begin;
+	begin = clock();
 	for(int i=0 ; i<num_samples ; i++){
 		index_set[i] = new int[sample_size];
 		col_set[i] = new int[attr_size];
@@ -758,7 +760,7 @@ void randomForest(string **dataset, int n){
 			else
 				col_set[i][a] = arr[a-1];
 		}
-		for(int j=0 ; j<sample_size;j++){	
+		for(int j=0 ; j<sample_size ; j++){	
 			tempIndex = generator_y(randomizer);
 			temp_sample_set[j] = new string[(attr_size+1)];
 			for(int k=0 ; k<=attr_size ; k++){
@@ -769,8 +771,10 @@ void randomForest(string **dataset, int n){
 		TreeNode* test = new TreeNode();
 		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
 		forest.insert(RFTree(i,test));
-		
 	}
+	clock_t end = clock();
+	double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
+	std::cout<<"Time to build random forest with "<<num_samples<<" trees :"<<rf_elapsed<<endl;
 	//voting and efficiency calculation phase
 	std::cout<<classifyRF(dataset[1],forest[1])<<endl;
 	std::cout<<dataset[1][0]<<endl;	
