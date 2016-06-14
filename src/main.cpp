@@ -23,35 +23,22 @@ struct TreeNode {
 	TreeNode *left;
 	TreeNode *right;
 };
-// Struct to store 
-struct SampleData {
-	//int size_sample = size_y/3;
-	int *data_ids;
-	SampleData(int indexes[]){
-		memcpy(data_ids , indexes, sizeof(indexes));
-	}
-	//~SampleData(){		} Destructor, not sure whether necessary
-	//int searchIndex(int num){	
-		//return search(data_ids,0,size_sample-1,num);
-	//}	
-};
-
 
 
 // Function to Search Element
 int search(int a[], int beg, int end, int item) {
-	//int found=0;
+	int found=0;
 	if(beg==end)                                     // if Single Element is in the List 
 	{
 		if(item==a[beg])
-			return 1;//		found=1;
+			found=1;
 		else
-			return 0;//		found=0;
+			found=0;
 	}
 	else{
 		int mid = (beg + end)/2;
 		if(item == a[mid])
-			return 1;//		found=1;
+			found=1;
 		else if(item < a[mid])
 			search(a,beg,mid-1,item);                 // Function Calls Itself (Recursion) 
 		else
@@ -209,8 +196,8 @@ string* bestGiniSplit(string ** data_set, int size_y) {
 		return nullptr;
 }
 
-//for Random forest may not be necessary to have col_set
-string* bestGiniSplit(string ** data_set, int size_y, int col_size, int *col_set){
+//for Random forest 
+string* bestGiniSplit(string **data_set, int size_y, int col_size, int *col_set){
 	double best_gini = 2;
 	int row_split, column;
 	int numCol=col_size;
@@ -272,7 +259,7 @@ void printTree(TreeNode* p, int indent) {
 }
 
 // Inserts a terminal node with the decision class at the bottom of the tree.
-void insertTerminalNode(string ** data_set, int size_y, TreeNode* parent) {
+void insertTerminalNode(string **data_set, int size_y, TreeNode* parent) {
 	if (size_y == 0) return;
 	int *class_rank = new int[n_classes];
 	for (int i = 0; i < n_classes; i++) {
@@ -409,7 +396,7 @@ void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent) {
 }
 
 //For Random Forest
-void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent, int col_size, int *col_set){
+void SPRINT(string **data_set, int size_y, TreeNode *&root, TreeNode* parent, int col_size, int* col_set){
 	string *best_split = bestGiniSplit(data_set, size_y, col_size, col_set); // Call Random Forest version
 	if (!best_split) {
 		insertTerminalNode(data_set, size_y, parent); 
@@ -637,13 +624,23 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
 	return success_ratio;
 }
 
-//Make sample function
-void makeSample(string** dataset, string** sampleset, int size, int attr, SampleData indices){
-	
-}
+/*//Make sample function
+void makeSample(string **dataset, string **sampleset, int size, int attr, int *col_set, int *index_set){
+	sampleset = new string*[size];
+	//lot to edit here just for template
+	for(int j=0 ; j<sample_size;j++){	
+			index = generator(randomizer);
+			temp_sample_set[j] = dataset[index];
+			//memcpy(temp_sample_set[j][0],dataset[index][0],sizeof(string)*size_x);
+			//std::copy(&dataset[index][0],&dataset[index][(size_x-1)],&temp_sample_set[j]);
+			temp_index_set[j]=index;			
+		}
+}*/
+
+
 
 //classify
-int classifyRF(string* data, TreeNode* classifier){	
+int classifyRF(string *data, TreeNode* classifier){	
 	TreeNode* current_node = classifier;
 	while (current_node->split_condition) {
 		int current_column = atoi(current_node->split_condition[4].c_str());
@@ -667,44 +664,116 @@ int classifyRF(string* data, TreeNode* classifier){
 	return winning_class;
 }	
 
+int voting(std::map<int,TreeNode*> &forest, string *data){
+	std::map<int,int> result;
+	int winner = -1, max = 0, temp=0;
+	for(std::map<int, TreeNode*>::iterator it = forest.begin();it!=forest.end();++it){
+		result[classifyRF(data,it->second)]++;
+	}
+	for(std::map<int,int>::iterator iter = result.begin();iter!=result.end();++iter){
+		temp = iter->second;
+		if(temp > max){
+			winner = iter->first;
+			max = temp;
+		}
+	}
+	return winner;
+}
+
+//To use on test set
+int** voting(std::map<int, TreeNode*> &forest, string **dataset, int size ,std::map<int,int> &result, int num_trees){
+	int** confusion_matrix = new int*[n_classes];
+	for (int i = 0; i < n_classes; i++) {
+		confusion_matrix[i] = new int[n_classes];
+		for (int j = 0; j < n_classes; j++) {
+			confusion_matrix[i][j] = 0;
+		}
+	}
+	for (int i = 0; i < size; i++) {
+		for(int j=0; j<num_trees ; j++){
+			TreeNode* current_node = forest[j];
+			while (current_node->split_condition) {
+				int current_column = atoi(current_node->split_condition[4].c_str());
+				string current_value = dataset[i][current_column];
+				string split_value = current_node->split_condition[3];
+				if (attrs[current_column] == 1) {
+					if (atof(current_value.c_str()) <= atof(split_value.c_str()))
+						current_node = current_node->left;
+					else
+						current_node = current_node->right;
+
+				}
+				else {
+					if (split_value.compare(current_value) == 0)
+						current_node = current_node->left;
+					else
+						current_node = current_node->right;
+				}
+			}
+			int real_class = atoi(dataset[i][0].c_str());
+			int winning_class = current_node->winning_class;
+			confusion_matrix[real_class][winning_class]++;
+		}
+	}
+	return confusion_matrix;
+}
+
 
 //Random Forest method
 void randomForest(string **dataset, int n){
 	typedef std::map<int, TreeNode*> Forest;
 	typedef std::pair<int, TreeNode*> RFTree;
-	typedef std::map<int, SampleData> ForestData;
-	typedef std::pair<int, SampleData> DataPair;
-
+		
 	int num_samples=n;
 	Forest forest;
-	ForestData fdata;
-	string** temp_sample_set = new string*[(int)(size_y/3)];
-	std::random_device randomizer;
-	std::uniform_int_distribution<int> generator(0,size_y-1);
-	//building random forest phase
-	int	sample_size = size_y/3;
+	string** temp_sample_set = new string*[(int)(2*size_y/3)];
+	int	sample_size = 2*size_y/3;
 	int attr_size = sqrt(size_x);
-	int index;
-	int temp_index_set[sample_size];
+	int tempIndex,tempVal;
+	int **index_set = new int*[n];
+	int **col_set = new int*[n];	
+	//building random forest phase
+	std::random_device randomizer;
+	std::uniform_int_distribution<int> generator_y(0,size_y-1);
+	std::uniform_int_distribution<int> generator_x(0,size_x-2);
+	int maxVal = size_x-1;
+	int *arr;
+	arr = new int[maxVal];
+	for(int k=1 ; k<=maxVal;k++)
+		arr[k-1] = k;
+	//call make sample function inside loop
 	for(int i=0 ; i<num_samples ; i++){
+		index_set[i] = new int[sample_size];
+		col_set[i] = new int[attr_size];
+		while(maxVal!=1){
+			tempIndex = generator_x(randomizer);
+			tempVal=arr[tempIndex];
+			arr[tempIndex] = arr[maxVal];
+			arr[maxVal] = tempVal;
+			maxVal--;
+		}
+		for(int a=0 ; a<=attr_size ; a++){
+			if(a==0)
+				col_set[i][a] = a;
+			else
+				col_set[i][a] = arr[a-1];
+		}
 		for(int j=0 ; j<sample_size;j++){	
-			index = generator(randomizer);
-			temp_sample_set[j] = dataset[index];
-			//memcpy(temp_sample_set[j][0],dataset[index][0],sizeof(string)*size_x);
-			//std::copy(&dataset[index][0],&dataset[index][(size_x-1)],&temp_sample_set[j]);
-			temp_index_set[j]=index;			
+			tempIndex = generator_y(randomizer);
+			temp_sample_set[j] = new string[(attr_size+1)];
+			for(int k=0 ; k<=attr_size ; k++){
+				temp_sample_set[j][k] = dataset[tempIndex][(col_set[i][k])];
+			}			
+			index_set[i][j] = tempIndex;
 		}
 		TreeNode* test = new TreeNode();
-		SPRINT(temp_sample_set, sample_size, test, nullptr);
+		SPRINT(temp_sample_set, sample_size, test, nullptr, (attr_size+1), col_set[i]);
 		forest.insert(RFTree(i,test));
-		//SampleData samples = new SampleData(temp_index_set);
-		//fdata.insert(DataPair(i,samples));
+		
 	}
 	//voting and efficiency calculation phase
-	/*std::cout<<classifyRF(dataset[1],forest[1])<<endl;
-	std::cout<<dataset[1][0]<<endl;*/
-	
-	
+	std::cout<<classifyRF(dataset[1],forest[1])<<endl;
+	std::cout<<dataset[1][0]<<endl;	
 }
 
 
