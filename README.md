@@ -6,6 +6,7 @@ Configuration file (named config.cnf and on the same folder as the executable an
 
 ```
 sprint #Either sprint (1 tree, k fold cross validation) or random forest (k trees)
+compact #Either compact (console output) or verbose (results are printed to result.data file, with predicted class labels first)
 adult-proc.data #Dataset file name. CSV, one record per row. Supports strings and numbers. Class label (integer) always first.
 32561 #Number of rows (size of the dataset) to read. Can be less than the actual dataset size.
 15  #Number of attributes (including class label) in the dataset

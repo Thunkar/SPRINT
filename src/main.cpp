@@ -497,7 +497,7 @@ double kFoldCrossValidation(string **data_set, int k, int **k_matrix, int test_s
     cout << "======" << endl;
     cout << "Success ratio of partition: " << test_set_index << " -> " << success_ratio << endl;
     cout << "Time to build the classifier: " << sprint_elapsed << "s. Time to classify the test data: " << classify_elapsed << "s." << endl;
-    cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
+    cout << "Internal node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
     return success_ratio;
 }
 
@@ -638,7 +638,7 @@ void randomForest(string **dataset, int n){
         double rf_elapsed = double(end - begin) / CLOCKS_PER_SEC;
         cout << "============" << endl;
         cout<<"Time to build random forest tree-> "<<i<<": "<<rf_elapsed<<endl;
-        cout << "Node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
+        cout << "Internal node count: " << current_tree_stats->node_count << " Leaf count: " << current_tree_stats->leaf_count << " Gini measures calculated: " << current_tree_stats->gini_count << " SPRINT iterations: " << current_tree_stats->sprint_count << endl;
     }
 
     //voting and efficiency calculation phase
