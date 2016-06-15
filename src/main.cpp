@@ -15,6 +15,7 @@ using namespace std;
 int size_y, size_x, n_classes;
 double gini_threshold;
 int* attrs;
+string mode;
 
 // Struct representing an internal node of the classifier
 struct TreeNode {
@@ -352,6 +353,10 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
             confusion_matrix[i][j] = 0;
         }
     }
+    ofstream resultfs;
+    if(mode.compare("verbose") == 0){
+        resultfs.open("result.data", ios_base::app); 
+    }
     for (int i = 0; i < size_y; i++) {
         TreeNode* current_node = classifier;
         while (current_node->split_condition) {
@@ -374,8 +379,19 @@ int** classify(string **data_set, int size_y, TreeNode* classifier) {
         }
         int real_class = atoi(data_set[i][0].c_str());
         int winning_class = current_node->winning_class;
+        resultfs << winning_class << ",";
+        if(mode.compare("verbose") == 0){
+            for(int j = 0; j < size_x; j++){
+                resultfs << data_set[i][j];
+                if(j != size_x - 1)
+                    resultfs << ",";
+            }
+        }
+        resultfs << endl;
         confusion_matrix[real_class][winning_class]++;
     }
+    if(mode.compare("verbose") == 0)
+        resultfs.close();
     return confusion_matrix;
 }
 
@@ -633,6 +649,10 @@ void randomForest(string **dataset, int n){
             confusion_matrix[i][j] = 0;
         }
     }
+    ofstream resultfs;
+    if(mode.compare("verbose") == 0){
+        resultfs.open("result.data", ios_base::app);
+    }
     clock_t begin1 = clock();
     int voted_winner, actual_winner;
 
@@ -646,8 +666,19 @@ void randomForest(string **dataset, int n){
         }
         voted_winner = voting(forest, dataset[i], has_element);
         actual_winner = atoi(dataset[i][0].c_str());
+        resultfs << voted_winner << ",";
+        if(mode.compare("verbose") == 0) {
+            for(int j = 0; j < size_x; j++){
+                resultfs << dataset[i][j];
+                if(j != size_x -1)
+                    resultfs << ",";
+            }
+        }
+        resultfs << endl;
         confusion_matrix[actual_winner][voted_winner]++;
     }
+    if(mode.compare("verbose") == 0)
+        resultfs.close();
 
     int success = 0;
     int error = 0;
@@ -684,6 +715,8 @@ int main(int argc, char *argv[]) {
     string line;
     getline(configfs, line);
     string type = string(line);
+    getline(configfs, line);
+    mode = string(line);
     getline(configfs, line);
     string data_set_name = string(line);
     getline(configfs, line);
@@ -733,6 +766,7 @@ int main(int argc, char *argv[]) {
             data_set[i][j] = token;
         }
     }
+    remove("result.data");
     if(type.compare("sprint") == 0) {
 
         random_shuffle(&indexes[0], &indexes[size_y - 1]);
